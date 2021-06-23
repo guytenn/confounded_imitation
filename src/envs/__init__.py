@@ -2,14 +2,14 @@ from gym.envs.registration import register
 
 register(
     id='rooms-v0',
-    entry_point='src.assistive.rooms.rooms:RoomsEnv',
+    entry_point='src.envs.rooms.rooms:RoomsEnv',
     max_episode_steps=100000,
     kwargs={}
 )
 
 register(
     id='SparseHopper-v0',
-    entry_point='src.assistive.sparse.hopper:SparseHopper',
+    entry_point='src.envs.sparse.hopper:SparseHopper',
     max_episode_steps=1000,
     reward_threshold=2500.0
 )
