@@ -9,3 +9,4 @@
 *.yaml
 *.txt
 *.json
+!src/envs/assistive/assets/realistic_arm_limits_model.h5
