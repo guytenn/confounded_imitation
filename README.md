@@ -1,5 +1,10 @@
 # Imitation Learning with Partially Observable Confouned Data
 
+## Prerequisites
+```
+pip install git+https://github.com/Zackory/bullet3.git#egg=pybullet
+```
+
 ## Creating Expert Data
 
 ### Option 1: RL Agent
