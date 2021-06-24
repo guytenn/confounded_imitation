@@ -15,7 +15,7 @@ parser.add_argument(
     help='environment to train on (default: FeedingSawyer-v1')
 parser.add_argument(
     '--save-dir',
-    default='./datasets/assistive/',
+    default='~/.datasets/assistive/',
     help='root directory to save data (default: ./datasets/assistive/)')
 args = parser.parse_args()
 
@@ -62,6 +62,7 @@ while True:
 
     if ord('r') in keys and keys[ord('r')] & p.KEY_IS_DOWN:
         obs = env.reset()
+        continue
 
     if not key_pressed:
         continue
@@ -90,8 +91,10 @@ while True:
         dones.append(done)
 
 data = dict(states=np.array(states), actions=np.array(actions), rewards=np.array(rewards))
-Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-file_path = os.path.join(args.save_dir, args.env_name, f'data_1.h5')
+
+save_dir = os.path.join(args.save_dir, args.env_name)
+Path(save_dir).mkdir(parents=True, exist_ok=True)
+file_path = os.path.join(save_dir, f'data_1.h5')
 hf = h5py.File(file_path, 'w')
 for k, v in data.items():
     data_to_save = np.array(v)
