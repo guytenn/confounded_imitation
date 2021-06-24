@@ -24,6 +24,7 @@ for task in tasks:
             id='%s%s-v1' % (task, robot),
             entry_point='src.envs.assistive:%s%sEnv' % (task, robot),
             max_episode_steps=200,
+            kwargs={}
         )
 
 for task in ['ScratchItch', 'Feeding']:
@@ -32,16 +33,19 @@ for task in ['ScratchItch', 'Feeding']:
             id='%s%sMesh-v1' % (task, robot),
             entry_point='src.envs.assistive:%s%sMeshEnv' % (task, robot),
             max_episode_steps=200,
+            kwargs={}
         )
 
 register(
     id='HumanTesting-v1',
     entry_point='src.envs.assistive:HumanTestingEnv',
     max_episode_steps=200,
+    kwargs={}
 )
 
 register(
     id='SMPLXTesting-v1',
     entry_point='src.envs.assistive:SMPLXTestingEnv',
     max_episode_steps=200,
+    kwargs={}
 )

@@ -8,9 +8,9 @@ from .agents import furniture
 from .agents.furniture import Furniture
 
 class FeedingMeshEnv(FeedingEnv):
-    def __init__(self, robot, human):
+    def __init__(self, robot, human, seed=1001):
         # super(FeedingMeshEnv, self).__init__(robot=robot, human=human)
-        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(14 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(15 + len(human.controllable_joint_indices)))
+        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(14 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(15 + len(human.controllable_joint_indices)), seed=seed)
         self.general_model = True
         # Parameters for personalized human participants
         self.gender = 'female'

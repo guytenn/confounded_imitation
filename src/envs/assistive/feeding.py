@@ -6,8 +6,8 @@ from .agents import furniture
 from .agents.furniture import Furniture
 
 class FeedingEnv(AssistiveEnv):
-    def __init__(self, robot, human):
-        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)))
+    def __init__(self, robot, human, seed=1001):
+        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed)
 
     def step(self, action):
         if self.human.controllable:
