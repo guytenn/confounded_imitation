@@ -15,8 +15,8 @@ parser.add_argument(
     help='environment to train on (default: FeedingSawyer-v1')
 parser.add_argument(
     '--save-dir',
-    default='~/.datasets/assistive/',
-    help='root directory to save data (default: ./datasets/assistive/)')
+    default='./data/assistive/',
+    help='root directory to save data (default: ./data/assistive/)')
 args = parser.parse_args()
 
 if args.seed == -1:
