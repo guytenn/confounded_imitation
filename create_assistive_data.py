@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 from pathlib import Path
 import argparse
+import time
 
 parser = argparse.ArgumentParser(description='Assistive Data Generation')
 parser.add_argument(
@@ -61,7 +62,11 @@ while True:
         break
 
     if ord('r') in keys and keys[ord('r')] & p.KEY_IS_DOWN:
-        obs = env.reset()
+        time.sleep(1)
+        try:
+            obs = env.reset()
+        except:
+            break
         continue
 
     if not key_pressed:
