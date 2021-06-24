@@ -1,6 +1,8 @@
 from stable_baselines3 import SAC, TD3, DQN
 from src.sb3_extensions.im_sac import ImSAC
+from src.sb3_extensions.im_td3 import ImTD3
 from stable_baselines3.sac import MlpPolicy as SacMlpPolicy
+from stable_baselines3.td3 import MlpPolicy as Td3MlpPolicy
 from src.sb3_extensions.cnn_policy import CustomActorCriticCnnPolicy, CustomDqnCnnPolicy
 from src.sb3_extensions.im_ppo import ImPPO
 from src.sb3_extensions.im_dqn import ImDQN
@@ -48,16 +50,14 @@ def run(args):
                        device=device,
                        verbose=1)
 
-    if args.algo == 'sac':
+    if args.algo == 'sac' or args.algo == 'td3':
+        # for sac (currently not used)
         target_update_interval = -1
-        train_freq = 1000
-        gradient_steps = 1000
-        algo_params.update(dict(learning_starts=5000,
-                                target_update_interval=target_update_interval,
+        use_sde = True
+        algo_params.update(dict(learning_starts=args.learning_starts,
                                 buffer_size=args.buffer_size,
-                                train_freq=train_freq,
-                                gradient_steps=gradient_steps,
-                                use_sde=True,))
+                                train_freq=args.train_freq,
+                                gradient_steps=args.gradient_steps))
     elif args.algo == 'ppo':
         algo_params.update(dict(n_steps=args.n_steps))
     elif args.algo == "dqn":
@@ -78,6 +78,8 @@ def run(args):
 
     if args.algo == 'sac':
         model = ImSAC(SacMlpPolicy, env, **algo_params)
+    elif args.algo == 'td3':
+        model = ImTD3(Td3MlpPolicy, env, **algo_params)
     elif args.algo == 'ppo':
         model = ImPPO("MlpPolicy", env, **algo_params)
         # model = ImPPO(CustomActorCriticCnnPolicy, env, **algo_params)
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--run_name', required=True, type=str)
     parser.add_argument('--env_name', default='rooms-v0', type=str)
     parser.add_argument('--partial_data', action='store_true')
-    parser.add_argument('--algo', default='ppo', choices=['dqn', 'ppo', 'sac'], type=str)
+    parser.add_argument('--algo', default='ppo', choices=['dqn', 'ppo', 'sac', 'td3'], type=str)
     parser.add_argument('--total_timesteps', default=1000000, type=int)
     parser.add_argument('--buffer_size', default=100000, type=int)
     parser.add_argument('--batch_size', default=256, type=int)
@@ -142,6 +144,11 @@ if __name__ == '__main__':
     # PPO parameters
     parser.add_argument('--n_steps', default=2048, type=int)
     parser.add_argument('--n_envs', default=2, type=int)
+
+    # SAC and TD3 parameters
+    parser.add_argument('--learning_starts', default=1000, type=int)
+    parser.add_argument('--train_freq', default=1000, type=int)
+    parser.add_argument('--gradient_steps', default=1000, type=int)
 
     parsed_args = parser.parse_args()
 
