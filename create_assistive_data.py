@@ -27,12 +27,12 @@ env.render()
 obs = env.reset()
 
 # Map keys to position and orientation end effector movements
-pos_keys_actions = {ord('j'): np.array([-0.01, 0, 0]), ord('l'): np.array([0.01, 0, 0]),
-                    ord('u'): np.array([0, -0.01, 0]), ord('o'): np.array([0, 0.01, 0]),
+pos_keys_actions = {ord('a'): np.array([-0.01, 0, 0]), ord('d'): np.array([0.01, 0, 0]),
+                    ord('s'): np.array([0, -0.01, 0]), ord('w'): np.array([0, 0.01, 0]),
                     ord('k'): np.array([0, 0, -0.01]), ord('i'): np.array([0, 0, 0.01])}
 rpy_keys_actions = {ord('k'): np.array([-0.05, 0, 0]), ord('i'): np.array([0.05, 0, 0]),
-                    ord('u'): np.array([0, -0.05, 0]), ord('o'): np.array([0, 0.05, 0]),
-                    ord('j'): np.array([0, 0, -0.05]), ord('l'): np.array([0, 0, 0.05])}
+                    ord('s'): np.array([0, -0.05, 0]), ord('w'): np.array([0, 0.05, 0]),
+                    ord('a'): np.array([0, 0, -0.05]), ord('d'): np.array([0, 0, 0.05])}
 
 start_pos, orient = env.robot.get_pos_orient(env.robot.right_end_effector)
 start_rpy = env.get_euler(orient)
