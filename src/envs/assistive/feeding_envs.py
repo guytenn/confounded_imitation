@@ -11,6 +11,7 @@ from .agents.human import Human
 from .agents.human_mesh import HumanMesh
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
+import numpy as np
 
 robot_arm = 'right'
 human_controllable_joint_indices = human.head_joints
@@ -24,7 +25,10 @@ class FeedingBaxterEnv(FeedingEnv):
 
 class FeedingSawyerEnv(FeedingEnv):
     def __init__(self, seed=1001):
+        if seed == -1:
+            seed = np.random.randint(2 ** 30 - 1)
         super(FeedingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), seed=seed)
+register_env('assistive_gym:FeedingSawyer-v1', lambda config: FeedingSawyerEnv(seed=-1))
 
 class FeedingJacoEnv(FeedingEnv):
     def __init__(self, seed=1001):
