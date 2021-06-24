@@ -133,7 +133,7 @@ if __name__ == '__main__':
     parser.add_argument('--dice_coeff', default=1, type=float)
     parser.add_argument('--dice_n_epochs', default=0, type=int)
     parser.add_argument('--dice_train_every', default=10, type=int)
-    parser.add_argument('--expert_load_name', default='expert_force1', type=str)
+    parser.add_argument('--expert_load_name', default='', type=str)
 
     parser.add_argument('--wandb', action='store_true')
 

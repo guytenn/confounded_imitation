@@ -78,7 +78,7 @@ class ImSAC(SAC):
         env: Union[GymEnv, str],
         dice_trainer=None,
         dice_coeff: float = 1.,
-        dice_n_updates: int = 0,
+        dice_n_epochs: int = 0,
         dice_train_every: int = 10,
         learning_rate: Union[float, Schedule] = 3e-4,
         buffer_size: int = int(1e6),
@@ -136,9 +136,9 @@ class ImSAC(SAC):
         self.dice_trainer = dice_trainer
         self.dice_coeff = dice_coeff
         if dice_trainer is None:
-            self.dice_n_updates = 0
+            self.dice_n_epochs = 0
         else:
-            self.dice_n_updates = dice_n_updates
+            self.dice_n_epochs = dice_n_epochs
         self.dice_train_every = dice_train_every
         self.iters_until_dice = dice_train_every
 
@@ -161,9 +161,9 @@ class ImSAC(SAC):
             # Sample replay buffer
             replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
 
-            if self.dice_n_updates > 0:
-                im_rewards = self.dice_trainer.predict_reward(replay_data.observations, replay_data.actions, self.gamma)
-                aug_rewards = replay_data.rewards + self.dice_coeff * im_rewards
+            if self.dice_n_epochs > 0:
+                im_rewards = self.dice_trainer.predict_reward(replay_data.observations, replay_data.dones, replay_data.next_observations)
+                aug_rewards = (1 - self.dice_coeff) * replay_data.rewards + self.dice_coeff * im_rewards
             else:
                 aug_rewards = replay_data.rewards
 
@@ -238,9 +238,11 @@ class ImSAC(SAC):
 
         self._n_updates += gradient_steps
 
-        if self.dice_n_updates > 0:
-            if self.iters_until_dice <= 0:
-                self.dice_trainer.train_step(self.replay_buffer, self.dice_n_updates, normalize_env=self._vec_normalize_env)
+
+        if self.dice_n_epochs > 0:
+            if self.iters_until_dice <= 1:
+                self.dice_trainer.train_step(self.replay_buffer, self.dice_n_epochs,
+                                             normalize_env=self._vec_normalize_env)
                 self.iters_until_dice = self.dice_train_every
             else:
                 self.iters_until_dice -= 1
