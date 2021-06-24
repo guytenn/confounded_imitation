@@ -3,7 +3,10 @@ import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from ray.rllib.agents import ppo, sac
 from ray.tune.logger import pretty_print
-# from numpngw import write_apng
+try:
+    from numpngw import write_apng
+except:
+    write_apng = None
 import gym
 import src.envs
 
