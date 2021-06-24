@@ -1,11 +1,29 @@
 from typing import Dict, Generator, Optional, Union, NamedTuple
 from gym import spaces
 from stable_baselines3.common.type_aliases import ReplayBufferSamples, RolloutBufferSamples
-from stable_baselines3.common.buffers import RolloutBuffer
+from stable_baselines3.common.buffers import RolloutBuffer, ReplayBuffer
 from stable_baselines3.common.vec_env import VecNormalize
 import numpy as np
 import torch as th
 
+
+class CustomReplayBuffer(ReplayBuffer):
+    def __init__(
+        self,
+        buffer_size: int,
+        observation_space: spaces.Space,
+        action_space: spaces.Space,
+        device: Union[th.device, str] = "cpu",
+        n_envs: int = 1,
+        optimize_memory_usage: bool = False,
+    ):
+        super(CustomReplayBuffer, self).__init__(buffer_size, observation_space, action_space, device, n_envs=n_envs, optimize_memory_usage=optimize_memory_usage)
+
+    def get(self, n_samples, batch_size) -> Generator[RolloutBufferSamples, None, None]:
+        i = 0
+        while i < n_samples:
+            yield self.sample(batch_size)
+            i += 1
 
 class CustomRolloutBuffer(RolloutBuffer):
     def __init__(

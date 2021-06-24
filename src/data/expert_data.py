@@ -28,3 +28,6 @@ class ExpertData:
                                dones=self.dones[idx])
 
         return data
+
+    def __len__(self):
+        return len(self.actions)

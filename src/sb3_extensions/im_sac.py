@@ -13,6 +13,8 @@ from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedul
 from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.sac.policies import SACPolicy
 
+from src.sb3_extensions.buffers import CustomReplayBuffer
+
 import torch
 
 
@@ -144,6 +146,14 @@ class ImSAC(SAC):
 
     def _setup_model(self) -> None:
         super(ImSAC, self)._setup_model()
+
+        self.replay_buffer = CustomReplayBuffer(
+            self.buffer_size,
+            self.observation_space,
+            self.action_space,
+            self.device,
+            optimize_memory_usage=self.optimize_memory_usage,
+        )
 
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update optimizers learning rate

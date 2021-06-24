@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from stable_baselines3.common.running_mean_std import RunningMeanStd
 from src.common.utils import to_onehot
 import gym.spaces as spaces
+from src.sb3_extensions.buffers import CustomReplayBuffer, CustomRolloutBuffer
 
 
 class Flatten(nn.Module):
@@ -115,9 +116,16 @@ class DICETrainer(nn.Module):
     def train_step(self, replay_buffer, dice_n_epochs=10, normalize_env=None):
         self.train()
 
+        if isinstance(replay_buffer, CustomRolloutBuffer):
+            batch_generator = replay_buffer.get(self.batch_size)
+        elif isinstance(replay_buffer, CustomReplayBuffer):
+            batch_generator = replay_buffer.get(max(len(self.expert_buffer) // self.batch_size, 1), self.batch_size)
+        else:
+            raise ValueError(f"Unsupported type {type(replay_buffer)} for training DICE.")
+
         new_weights = torch.rand(len(self.expert_buffer.weights), device=self.expert_buffer.weights.device)
         for _ in range(dice_n_epochs):
-            for policy_data in replay_buffer.get(self.batch_size):
+            for policy_data in batch_generator:
                 expert_data_aug = self.expert_buffer.sample(self.batch_size, env=normalize_env, weights=new_weights)
                 expert_data_orig = self.expert_buffer.sample(self.batch_size, env=normalize_env)
 
