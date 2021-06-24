@@ -29,6 +29,7 @@ def setup_config(env, algo, coop=False, seed=0, extra_configs={}):
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
     config['log_level'] = 'ERROR'
+    config['framework'] = 'torch'
     # if algo == 'sac':
     #     config['num_workers'] = 1
     if coop:
