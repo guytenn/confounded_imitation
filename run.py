@@ -69,6 +69,8 @@ def run(args):
         else:
             features_to_remove = []
         expert_data = load_expert_data(env, args.expert_load_name, device)
+        if len(expert_data) // args.batch_size < 1:
+            raise ValueError("Expert_data too small, use smaller batch size.")
         dice_trainer = DICETrainer(expert_data, env.action_space, args.batch_size, 400, args.gamma, device, features_to_remove=features_to_remove)
         dice_params = dict(dice_trainer=dice_trainer, dice_coeff=args.dice_coeff,
                            dice_n_epochs=args.dice_n_epochs, dice_train_every=args.dice_train_every)

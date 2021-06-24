@@ -119,7 +119,7 @@ class DICETrainer(nn.Module):
         if isinstance(replay_buffer, CustomRolloutBuffer):
             batch_generator = replay_buffer.get(self.batch_size)
         elif isinstance(replay_buffer, CustomReplayBuffer):
-            batch_generator = replay_buffer.get(max(len(self.expert_buffer) // self.batch_size, 1), self.batch_size)
+            batch_generator = replay_buffer.get(len(self.expert_buffer) // self.batch_size, self.batch_size)
         else:
             raise ValueError(f"Unsupported type {type(replay_buffer)} for training DICE.")
 
