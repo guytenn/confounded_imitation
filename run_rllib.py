@@ -3,6 +3,7 @@ import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from ray.rllib.agents import ppo, sac
 from ray.tune.logger import pretty_print
+import ray.rllib.utils.exploration.curiosity
 try:
     from numpngw import write_apng
 except:
@@ -13,9 +14,10 @@ from tqdm import tqdm
 import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
+from src.rllib_extensions.dice import DICE
 
 
-def setup_config(env, algo, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
     num_processes = multiprocessing.cpu_count()
     if algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
@@ -37,6 +39,20 @@ def setup_config(env, algo, coop=False, seed=0, extra_configs={}):
     config['seed'] = seed
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
+    if dice_coef > 0:
+        expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env.spec.id, 'data_1.h5')
+        config["exploration_config"] = {
+            "type": DICE,
+            "lr": 0.001,
+            "gamma": config['gamma'],
+            "expert_path": expert_data_path,
+            "hidden_dim": 100,
+            "dice_coef": dice_coef,
+            "state_dim": env.observation_space.shape[0],
+            "sub_exploration": {
+                "type": "StochasticSampling",
+            }
+        }
     # if algo == 'sac':
     #     config['num_workers'] = 1
     if coop:
@@ -46,11 +62,11 @@ def setup_config(env, algo, coop=False, seed=0, extra_configs={}):
         config['env_config'] = {'num_agents': 2}
     return {**config, **extra_configs}
 
-def load_policy(env, algo, env_name, policy_path=None, coop=False, seed=0, extra_configs={}):
+def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
-        agent = ppo.PPOTrainer(setup_config(env, algo, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = ppo.PPOTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -78,10 +94,10 @@ def make_env(env_name, coop=False, seed=1001):
     env.seed(seed)
     return env
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', coop=False, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, coop, seed, extra_configs)
+    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, coop, seed, extra_configs)
     env.disconnect()
 
     timesteps = 0
@@ -238,6 +254,8 @@ if __name__ == '__main__':
                         help='Whether to save data of policy over n_episodes')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
+    parser.add_argument('--dice_coef', type=float, default=0,
+                        help='Dice coefficient, between 0 and 1')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
     parser.add_argument('--load-policy-path', default='./trained_models/',
@@ -255,8 +273,11 @@ if __name__ == '__main__':
     coop = ('Human' in args.env)
     checkpoint_path = None
 
+    if args.dice_coef < 0 or args.dice_coef > 1:
+        raise ValueError("dice_coeff must be a value in [0,1]")
+
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, coop=coop, seed=args.seed)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, seed=args.seed)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:

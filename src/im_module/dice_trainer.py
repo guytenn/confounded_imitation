@@ -168,7 +168,7 @@ class DICETrainer(nn.Module):
             #
             # return reward
 
-            reward = -torch.tanh(d)
+            reward = -d
 
             if self.returns is None:
                 self.returns = reward.clone()

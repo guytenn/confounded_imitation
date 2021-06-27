@@ -1,0 +1,197 @@
+from gym.spaces import Discrete, MultiDiscrete, Space
+import numpy as np
+from typing import Optional, Tuple, Union
+
+from ray.rllib.models.action_dist import ActionDistribution
+from ray.rllib.models.catalog import ModelCatalog
+from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.models.tf.tf_action_dist import Categorical, MultiCategorical
+from ray.rllib.models.torch.misc import SlimFC
+from ray.rllib.models.torch.torch_action_dist import TorchCategorical, \
+    TorchMultiCategorical
+from ray.rllib.models.utils import get_activation_fn
+from ray.rllib.policy.sample_batch import SampleBatch
+from ray.rllib.utils import NullContextManager
+from ray.rllib.utils.annotations import override
+from ray.rllib.utils.exploration.exploration import Exploration
+from ray.rllib.utils.framework import try_import_tf, \
+    try_import_torch
+from ray.rllib.utils.from_config import from_config
+from ray.rllib.utils.tf_ops import get_placeholder, one_hot as tf_one_hot
+from ray.rllib.utils.torch_ops import one_hot
+from ray.rllib.utils.typing import FromConfigSpec, ModelConfigDict, TensorType
+
+tf1, tf, tfv = try_import_tf()
+torch, nn = try_import_torch()
+F = None
+if nn is not None:
+    F = nn.functional
+
+from src.data.expert_data import ExpertData
+from src.data.utils import load_h5_dataset
+
+
+class DICE(Exploration):
+    def __init__(self,
+                 action_space: Space,
+                 *,
+                 framework: str,
+                 model: ModelV2,
+                 lr: float = 1e-3,
+                 sub_exploration: Optional[FromConfigSpec] = None,
+                 expert_path=None,
+                 hidden_dim=400,
+                 gamma=0.99,
+                 features_to_remove=[],
+                 state_dim=None,
+                 dice_coef=0.5,
+                 **kwargs):
+
+        super().__init__(
+            action_space, model=model, framework=framework, **kwargs)
+
+        # if self.policy_config["num_workers"] != 0:
+        #     raise ValueError(
+        #         "Curiosity exploration currently does not support parallelism."
+        #         " `num_workers` must be 0!")
+
+        self.expert_path = expert_path
+        self.gamma = gamma
+        self.features_to_remove = features_to_remove
+        self.dice_coef = dice_coef
+        self.lr = lr
+        # TODO: (sven) if sub_exploration is None, use Trainer's default
+        #  Exploration config.
+        if sub_exploration is None:
+            raise NotImplementedError
+        self.sub_exploration = sub_exploration
+
+        self.expert_buffer = None
+
+        self.g = self._create_fc_net((state_dim, hidden_dim, 1), "relu", name="g_net")
+        self.h = self._create_fc_net((state_dim, hidden_dim, 1), "relu", name="h_net")
+
+        # This is only used to select the correct action
+        self.exploration_submodule = from_config(
+            cls=Exploration,
+            config=self.sub_exploration,
+            action_space=self.action_space,
+            framework=self.framework,
+            policy_config=self.policy_config,
+            model=self.model,
+            num_workers=self.num_workers,
+            worker_index=self.worker_index,
+        )
+
+    @override(Exploration)
+    def get_exploration_action(self,
+                               *,
+                               action_distribution: ActionDistribution,
+                               timestep: Union[int, TensorType],
+                               explore: bool = True):
+        # Simply delegate to sub-Exploration module.
+        return self.exploration_submodule.get_exploration_action(
+            action_distribution=action_distribution,
+            timestep=timestep,
+            explore=explore)
+
+    @override(Exploration)
+    def get_exploration_optimizer(self, optimizers):
+        data = load_h5_dataset(self.expert_path)
+        if 'dones' not in data.keys():
+            data['dones'] = np.zeros(len(data['actions']))
+        self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'), data['dones'], device=self.device)
+
+        if self.framework == "torch":
+            g_params = list(self.g.parameters())
+            h_params = list(self.h.parameters())
+
+            # Now that the Policy's own optimizer(s) have been created (from
+            # the Model parameters (IMPORTANT: w/o(!) the curiosity params),
+            # we can add our curiosity sub-modules to the Policy's Model.
+            self.model.g = self.g.to(self.device)
+            self.model.h = self.h.to(self.device)
+            self._optimizer = torch.optim.Adam(g_params + h_params, lr=self.lr)
+        else:
+            raise NotImplementedError
+
+        return optimizers
+
+    @override(Exploration)
+    def postprocess_trajectory(self, policy, sample_batch, tf_sess=None):
+        if self.framework != "torch":
+            raise NotImplementedError
+        else:
+            self._postprocess_torch(policy, sample_batch)
+
+    def _forward_model(self, obs, next_obs, dones):
+        rs = self.model.g(obs)
+        vs = self.model.h(obs)
+        next_vs = self.model.h(next_obs)
+        return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
+
+    def _postprocess_torch(self, policy, sample_batch):
+        policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
+        policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
+        policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
+
+        policy_d = self._forward_model(policy_obs, policy_next_obs, policy_dones)
+
+        expert_data = self.expert_buffer.sample(len(policy_obs)+1)
+        expert_obs, expert_next_obs, expert_dones = \
+            expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+
+        expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+
+        loss = 0.9 * torch.pow(expert_d, 2).mean() + 0.1 * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+
+        # Scale intrinsic reward by eta hyper-parameter.
+        sample_batch[SampleBatch.REWARDS] = \
+            (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * (-policy_d.detach().cpu().numpy())
+
+        # Perform an optimizer step.
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
+
+        # Return the postprocessed sample batch (with the corrected rewards).
+        return sample_batch
+
+    def _create_fc_net(self, layer_dims, activation, name=None):
+        """Given a list of layer dimensions (incl. input-dim), creates FC-net.
+
+        Args:
+            layer_dims (Tuple[int]): Tuple of layer dims, including the input
+                dimension.
+            activation (str): An activation specifier string (e.g. "relu").
+
+        Examples:
+            If layer_dims is [4,8,6] we'll have a two layer net: 4->8 (8 nodes)
+            and 8->6 (6 nodes), where the second layer (6 nodes) does not have
+            an activation anymore. 4 is the input dimension.
+        """
+        layers = [
+            tf.keras.layers.Input(
+                shape=(layer_dims[0], ), name="{}_in".format(name))
+        ] if self.framework != "torch" else []
+
+        for i in range(len(layer_dims) - 1):
+            act = activation if i < len(layer_dims) - 2 else None
+            if self.framework == "torch":
+                layers.append(
+                    SlimFC(
+                        in_size=layer_dims[i],
+                        out_size=layer_dims[i + 1],
+                        initializer=torch.nn.init.xavier_uniform_,
+                        activation_fn=act))
+            else:
+                layers.append(
+                    tf.keras.layers.Dense(
+                        units=layer_dims[i + 1],
+                        activation=get_activation_fn(act),
+                        name="{}_{}".format(name, i)))
+
+        if self.framework == "torch":
+            return nn.Sequential(*layers)
+        else:
+            return tf.keras.Sequential(layers)
