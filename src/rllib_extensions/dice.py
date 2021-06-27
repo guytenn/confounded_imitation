@@ -136,9 +136,6 @@ class DICE(Exploration):
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
 
     def _postprocess_torch(self, policy, sample_batch):
-        # if np.any(np.isnan(sample_batch[SampleBatch.REWARDS])):
-        #     return sample_batch
-
         policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
         policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
         policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
@@ -153,26 +150,27 @@ class DICE(Exploration):
 
         reward_bonus = -policy_d
 
-        # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-        #     self.mean = None
-        #     self.returns = reward_bonus.clone()
-        #
-        # if True: #update_rms:
-        #     self.returns = self.returns * self.gamma + reward_bonus
-        #     self.update_running_avg(self.returns)
+        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+            self.mean = None
+            self.returns = reward_bonus.clone()
 
-        # reward_bonus = reward_bonus / torch.sqrt(self.var.detach() + 1e-8)
+        if True: #update_rms:
+            self.returns = self.returns * self.gamma + reward_bonus
+            self.update_running_avg(self.returns)
+
+        reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
+        reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
 
         # Scale intrinsic reward by eta hyper-parameter.
         sample_batch[SampleBatch.REWARDS] = \
-            (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus.detach().cpu().numpy()
+            (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
         alpha = 1.0
-        # loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
         # kl divergence
         # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
         # GAIL loss
-        loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+        # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
         # Perform an optimizer step.
         self._optimizer.zero_grad()
         loss.backward()
