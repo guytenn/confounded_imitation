@@ -175,6 +175,6 @@ class DICETrainer(nn.Module):
 
             if update_rms:
                 self.returns = self.returns * self.gamma + reward
-                self.ret_rms.update(self.returns.cpu().numpy())
+                self.ret_rms.update(self.returns)
 
             return reward / np.sqrt(self.ret_rms.var + 1e-8)
