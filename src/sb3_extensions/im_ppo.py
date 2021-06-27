@@ -89,7 +89,7 @@ class ImPPO(PPO):
         ent_coef: float = 0.0,
         vf_coef: float = 1.0,
         max_grad_norm: float = 10.5,
-        use_sde: bool = False,
+        use_sde: bool = True,
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = 0.01,
         tensorboard_log: Optional[str] = None,
