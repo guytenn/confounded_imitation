@@ -34,7 +34,7 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
         config['Q_model']['fcnet_hiddens'] = [100, 100]
         config['policy_model']['fcnet_hiddens'] = [100, 100]
         # config['normalize_actions'] = False
-    config['num_workers'] = num_processes
+    config['num_workers'] = 1 # num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
     config['log_level'] = 'ERROR'

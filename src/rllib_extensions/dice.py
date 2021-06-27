@@ -136,14 +136,6 @@ class DICE(Exploration):
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
 
     def _postprocess_torch(self, policy, sample_batch):
-        if not hasattr(policy, 'dice_g'):
-            policy.dice_g = self.g
-            policy.dice_h = self.h
-            policy.dice_optim = self._optimizer
-        else:
-            self.g = policy.dice_g
-            self.h = policy.dice_h
-            self._optimizer = policy.dice_optim
         policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
         policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
         policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
