@@ -46,7 +46,8 @@ def run(args):
 
     algo_params = dict(gamma=args.gamma,
                        batch_size=args.batch_size,
-                       policy_kwargs=dict(net_arch=[400, 300]),
+                       policy_kwargs=dict(net_arch=[100, 100]),
+                       learning_rate=args.learning_rate,
                        device=device,
                        verbose=1)
 
@@ -120,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--buffer_size', default=100000, type=int)
     parser.add_argument('--batch_size', default=256, type=int)
     parser.add_argument('--gamma', default=0.99, type=float)
+    parser.add_argument('--learning_rate', default=float(5e-5), type=float)
 
     # sparse mujoco params
     parser.add_argument('--max_force', default=1.0, type=float)
