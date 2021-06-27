@@ -59,7 +59,7 @@ def run(args):
                                 train_freq=args.train_freq,
                                 gradient_steps=args.gradient_steps))
     elif args.algo == 'ppo':
-        algo_params.update(dict(n_steps=args.n_steps))
+        algo_params.update(dict(n_steps=args.n_steps, n_epoch=args.n_epoch))
     elif args.algo == "dqn":
         algo_params.update(dict(buffer_size=args.buffer_size))
 
@@ -121,9 +121,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=256, type=int)
     parser.add_argument('--gamma', default=0.99, type=float)
 
-    # rooms params
-
-
     # sparse mujoco params
     parser.add_argument('--max_force', default=1.0, type=float)
     parser.add_argument('--sparse', action='store_true')
@@ -142,8 +139,9 @@ if __name__ == '__main__':
     parser.add_argument('--wandb', action='store_true')
 
     # PPO parameters
+    parser.add_argument('--n_envs', default=1, type=int)
     parser.add_argument('--n_steps', default=2048, type=int)
-    parser.add_argument('--n_envs', default=2, type=int)
+    parser.add_argument('--n_epoch', default=10, type=int)
 
     # SAC and TD3 parameters
     parser.add_argument('--learning_starts', default=1000, type=int)
