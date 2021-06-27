@@ -153,15 +153,15 @@ class DICE(Exploration):
 
         reward_bonus = -policy_d
 
-        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-            self.mean = None
-            self.returns = reward_bonus.clone()
+        # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+        #     self.mean = None
+        #     self.returns = reward_bonus.clone()
+        #
+        # if True: #update_rms:
+        #     self.returns = self.returns * self.gamma + reward_bonus
+        #     self.update_running_avg(self.returns)
 
-        if True: #update_rms:
-            self.returns = self.returns * self.gamma + reward_bonus
-            self.update_running_avg(self.returns)
-
-        reward_bonus /= torch.sqrt(self.var + 1e-8)
+        # reward_bonus = reward_bonus / torch.sqrt(self.var.detach() + 1e-8)
 
         # Scale intrinsic reward by eta hyper-parameter.
         sample_batch[SampleBatch.REWARDS] = \

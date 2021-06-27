@@ -32,6 +32,9 @@ class RoomsEnv(core.Env):
         vert_wind = (up, down)
         horz_wind = (right, left)
         '''
+        if seed == -1:
+            seed = np.random.randint(2 ** 30 - 1)
+
         self.rows, self.cols = rows, cols
         if max_steps is None:
             self.max_steps = 1 * (rows + cols)
@@ -372,6 +375,9 @@ class RoomsEnv(core.Env):
         else:
             self.rng = np.random.RandomState()
         return self.rng.seed
+
+    def disconnect(self):
+        pass
 
 
 if __name__ == '__main__':

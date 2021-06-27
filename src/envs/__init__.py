@@ -1,4 +1,7 @@
 from gym.envs.registration import register
+from ray.tune.registry import register_env
+
+from src.envs.rooms.rooms import RoomsEnv
 
 register(
     id='rooms-v0',
@@ -6,6 +9,7 @@ register(
     max_episode_steps=100000,
     kwargs={}
 )
+register_env('assistive_gym:rooms-v0', lambda config: RoomsEnv(seed=-1))
 
 register(
     id='SparseHopper-v0',
