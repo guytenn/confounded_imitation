@@ -88,7 +88,7 @@ class ImPPO(PPO):
         clip_range_vf: Union[None, float, Schedule] = None,
         ent_coef: float = 0.0,
         vf_coef: float = 1.0,
-        max_grad_norm: float = 10.5,
+        max_grad_norm: float = 10.0,
         use_sde: bool = False,
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = 0.01,

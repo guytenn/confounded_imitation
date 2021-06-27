@@ -60,7 +60,8 @@ def run(args):
                                 train_freq=args.train_freq,
                                 gradient_steps=args.gradient_steps))
     elif args.algo == 'ppo':
-        algo_params.update(dict(n_steps=args.n_steps, n_epochs=args.n_epochs))
+        algo_params.update(dict(n_steps=args.n_steps, n_epochs=args.n_epochs,
+                                vf_coef=args.vf_coef, ent_coef=args.ent_coef))
     elif args.algo == "dqn":
         algo_params.update(dict(buffer_size=args.buffer_size))
 
@@ -144,6 +145,9 @@ if __name__ == '__main__':
     parser.add_argument('--n_envs', default=1, type=int)
     parser.add_argument('--n_steps', default=2048, type=int)
     parser.add_argument('--n_epochs', default=10, type=int)
+    parser.add_argument('--vf_coef', default=1.0, type=float)
+    parser.add_argument('--ent_coef', default=0.1, type=float)
+
 
     # SAC and TD3 parameters
     parser.add_argument('--learning_starts', default=1000, type=int)
