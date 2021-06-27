@@ -167,7 +167,8 @@ class DICE(Exploration):
         sample_batch[SampleBatch.REWARDS] = \
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus.detach().cpu().numpy()
 
-        loss = 0.9 * torch.pow(expert_d, 2).mean() + 0.1 * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        alpha = 1.0
+        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
         # Perform an optimizer step.
         self._optimizer.zero_grad()
         loss.backward()
