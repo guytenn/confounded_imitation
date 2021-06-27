@@ -68,8 +68,15 @@ class DICE(Exploration):
 
         self.expert_buffer = None
 
-        self.g = self._create_fc_net((state_dim, hidden_dim, 1), "relu", name="g_net")
-        self.h = self._create_fc_net((state_dim, hidden_dim, 1), "relu", name="h_net")
+        self.g = self._create_fc_net((state_dim, hidden_dim, hidden_dim, 1), "relu", name="g_net")
+        self.h = self._create_fc_net((state_dim, hidden_dim, hidden_dim, 1), "relu", name="h_net")
+
+        self.mean = None
+        self.var = None
+        self.count = None
+        self.returns = None
+
+        self.i = 0
 
         # This is only used to select the correct action
         self.exploration_submodule = from_config(
@@ -143,12 +150,23 @@ class DICE(Exploration):
 
         expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
 
-        loss = 0.9 * torch.pow(expert_d, 2).mean() + 0.1 * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        reward_bonus = -policy_d
+
+        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+            self.mean = None
+            self.returns = reward_bonus.clone()
+
+        if True: #update_rms:
+            self.returns = self.returns * self.gamma + reward_bonus
+            self.update_running_avg(self.returns)
+
+        reward_bonus /= torch.sqrt(self.var + 1e-8)
 
         # Scale intrinsic reward by eta hyper-parameter.
         sample_batch[SampleBatch.REWARDS] = \
-            (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * (-policy_d.detach().cpu().numpy())
+            (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus.detach().cpu().numpy()
 
+        loss = 0.9 * torch.pow(expert_d, 2).mean() + 0.1 * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
         # Perform an optimizer step.
         self._optimizer.zero_grad()
         loss.backward()
@@ -195,3 +213,29 @@ class DICE(Exploration):
             return nn.Sequential(*layers)
         else:
             return tf.keras.Sequential(layers)
+
+    def update_running_avg(self, batch):
+        if self.mean is None:
+            self.mean = torch.zeros(batch.shape)
+            self.var = torch.ones(batch.shape)
+            self.count = float(1e-4)
+        batch_mean = torch.mean(batch, dim=0)
+        batch_var = torch.var(batch, dim=0)
+        batch_count = batch.shape[0]
+        self.update_from_moments(batch_mean, batch_var, batch_count)
+
+    def update_from_moments(self, batch_mean, batch_var, batch_count):
+        delta = batch_mean - self.mean
+        tot_count = self.count + batch_count
+
+        new_mean = self.mean + delta * batch_count / tot_count
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        m_2 = m_a + m_b + torch.square(delta) * self.count * batch_count / (self.count + batch_count)
+        new_var = m_2 / (self.count + batch_count)
+
+        new_count = batch_count + self.count
+
+        self.mean = new_mean
+        self.var = new_var
+        self.count = new_count
