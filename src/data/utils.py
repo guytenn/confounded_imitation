@@ -33,6 +33,13 @@ def load_h5_dataset(h5path):
     return dataset
 
 
+def get_largest_suffix(root_path, root_name):
+    imax = 0
+    for fname in os.listdir(root_path):
+        imax = max(int(fname.split(root_name)[1].split('.')[0]), imax)
+    return imax+1
+
+
 if __name__ == '__main__':
     import src.envs
     import gym

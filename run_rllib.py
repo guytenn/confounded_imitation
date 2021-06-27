@@ -9,6 +9,10 @@ except:
     write_apng = None
 import gym
 import src.envs
+from tqdm import tqdm
+import h5py
+from pathlib import Path
+from src.data.utils import get_largest_suffix
 
 
 def setup_config(env, algo, coop=False, seed=0, extra_configs={}):
@@ -136,21 +140,25 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         write_apng(filename, frames, delay=100)
         return filename
 
-def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, seed=0, verbose=False, extra_configs={}):
+
+def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, seed=0, verbose=False, save_data=False, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
     test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, seed, extra_configs)
 
+    data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
     forces = []
     task_successes = []
-    for episode in range(n_episodes):
+    lengths = np.zeros(n_episodes)
+    for episode in tqdm(range(n_episodes)):
         obs = env.reset()
         done = False
         reward_total = 0.0
         force_list = []
         task_success = 0.0
         while not done:
+            lengths[episode] += 1
             if coop:
                 # Compute the next action for the robot/human using the trained policies
                 action_robot = test_agent.compute_action(obs['robot'], policy_id='robot')
@@ -162,7 +170,13 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, see
                 info = info['robot']
             else:
                 action = test_agent.compute_action(obs)
+                prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
+                if save_data:
+                    data['states'].append(prev_obs)
+                    data['actions'].append(action)
+                    data['rewards'].append(reward)
+                    data['dones'].append(done)
             reward_total += reward
             force_list.append(info['total_force_on_human'])
             task_success = info['task_success']
@@ -187,7 +201,23 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, see
     # print('Task Successes:', task_successes)
     print('Task Success Mean:', np.mean(task_successes))
     print('Task Success Std:', np.std(task_successes))
+
+    print('Task Length Mean:', np.mean(lengths))
+    print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
+
+    if save_data:
+        for key in data.keys():
+            data[key] = np.array(data[key])
+        save_dir = os.path.join('data', 'assistive', env_name)
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        suffix = get_largest_suffix(save_dir, 'data_')
+        file_path = os.path.join(save_dir, f'data_{suffix}.h5')
+        hf = h5py.File(file_path, 'w')
+        for k, v in data.items():
+            data_to_save = np.array(v)
+            hf.create_dataset(k, data=data_to_save)
+        hf.close()
 
 
 if __name__ == '__main__':
@@ -204,6 +234,8 @@ if __name__ == '__main__':
                         help='Whether to render a single rollout of a trained policy')
     parser.add_argument('--evaluate', action='store_true', default=False,
                         help='Whether to evaluate a trained policy over n_episodes')
+    parser.add_argument('--save-data', action='store_true', default=False,
+                        help='Whether to save data of policy over n_episodes')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
     parser.add_argument('--save-dir', default='./trained_models/',
@@ -227,6 +259,6 @@ if __name__ == '__main__':
         checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, coop=coop, seed=args.seed)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
-    if args.evaluate:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, coop=coop, seed=args.seed, verbose=args.verbose)
+    if args.evaluate or args.save_data:
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data)
 
