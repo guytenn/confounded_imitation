@@ -177,4 +177,4 @@ class DICETrainer(nn.Module):
                 self.returns = self.returns * self.gamma + reward
                 self.ret_rms.update(self.returns.cpu().numpy())
 
-            return reward / np.sqrt(torch.tensor(self.ret_rms.var, device=reward.device) + 1e-8)
+            return reward / torch.sqrt(torch.tensor(self.ret_rms.var).to(reward.device) + 1e-8)
