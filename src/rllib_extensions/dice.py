@@ -136,6 +136,14 @@ class DICE(Exploration):
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
 
     def _postprocess_torch(self, policy, sample_batch):
+        if not hasattr(policy, 'dice_g'):
+            policy.dice_g = self.g
+            policy.dice_h = self.h
+            policy.dice_optim = self._optimizer
+        else:
+            self.g = policy.dice_g
+            self.h = policy.dice_h
+            self._optimizer = policy.dice_optim
         policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
         policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
         policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
@@ -159,23 +167,22 @@ class DICE(Exploration):
         sample_batch[SampleBatch.REWARDS] = \
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
-        for _ in range(5):
-            expert_data = self.expert_buffer.sample(len(policy_obs) + 1)
-            expert_obs, expert_next_obs, expert_dones = \
-                expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+        expert_data = self.expert_buffer.sample(len(policy_obs) + 1)
+        expert_obs, expert_next_obs, expert_dones = \
+            expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
 
-            expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+        expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
 
-            alpha = 0.9
-            loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
-            # kl divergence
-            # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
-            # GAIL loss
-            # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
-            # Perform an optimizer step.
-            self._optimizer.zero_grad()
-            loss.backward()
-            self._optimizer.step()
+        alpha = 0.9
+        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        # kl divergence
+        # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+        # GAIL loss
+        # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+        # Perform an optimizer step.
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return sample_batch
