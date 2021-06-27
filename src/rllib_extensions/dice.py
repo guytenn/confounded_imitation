@@ -168,7 +168,11 @@ class DICE(Exploration):
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus.detach().cpu().numpy()
 
         alpha = 1.0
-        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        # loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        # kl divergence
+        # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+        # GAIL loss
+        loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
         # Perform an optimizer step.
         self._optimizer.zero_grad()
         loss.backward()
