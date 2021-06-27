@@ -142,12 +142,6 @@ class DICE(Exploration):
 
         policy_d = self._forward_model(policy_obs, policy_next_obs, policy_dones)
 
-        expert_data = self.expert_buffer.sample(len(policy_obs)+1)
-        expert_obs, expert_next_obs, expert_dones = \
-            expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
-
-        expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
-
         reward_bonus = -policy_d
 
         if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
@@ -165,16 +159,23 @@ class DICE(Exploration):
         sample_batch[SampleBatch.REWARDS] = \
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
-        alpha = 0.5
-        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
-        # kl divergence
-        # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
-        # GAIL loss
-        # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
-        # Perform an optimizer step.
-        self._optimizer.zero_grad()
-        loss.backward()
-        self._optimizer.step()
+        for _ in range(5):
+            expert_data = self.expert_buffer.sample(len(policy_obs) + 1)
+            expert_obs, expert_next_obs, expert_dones = \
+                expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+
+            expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+
+            alpha = 0.9
+            loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+            # kl divergence
+            # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+            # GAIL loss
+            # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+            # Perform an optimizer step.
+            self._optimizer.zero_grad()
+            loss.backward()
+            self._optimizer.step()
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return sample_batch
