@@ -76,8 +76,6 @@ class DICE(Exploration):
         self.count = None
         self.returns = None
 
-        self.i = 0
-
         # This is only used to select the correct action
         self.exploration_submodule = from_config(
             cls=Exploration,
@@ -138,6 +136,9 @@ class DICE(Exploration):
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
 
     def _postprocess_torch(self, policy, sample_batch):
+        # if np.any(np.isnan(sample_batch[SampleBatch.REWARDS])):
+        #     return sample_batch
+
         policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
         policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
         policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
