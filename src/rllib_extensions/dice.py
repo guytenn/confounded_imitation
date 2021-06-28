@@ -196,7 +196,7 @@ class DICE(Exploration):
         # reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
         # reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
 
-        return reward_bonus
+        return reward_bonus.detach().cpu().numpy()
 
     def _postprocess_torch(self, policy, sample_batch):
         # ADD SAMPLES TO REPLAY
