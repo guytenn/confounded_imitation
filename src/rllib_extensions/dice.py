@@ -145,7 +145,7 @@ class DICE(Exploration):
         # vs = self.model.h(obs)
         # next_vs = self.model.h(next_obs)
         # res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
-        return res
+        return rs
         # return torch.sigmoid(res)
 
     def _train_step(self):
