@@ -79,8 +79,6 @@ class DICE(Exploration):
 
         self.replay_buffer = None
 
-        self.count_i = 0
-
         # This is only used to select the correct action
         self.exploration_submodule = from_config(
             cls=Exploration,
@@ -191,18 +189,18 @@ class DICE(Exploration):
         # reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
         reward_bonus = -policy_d
 
-        # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-        #     self.mean = None
-        #     self.returns = reward_bonus.clone()
-        #
-        # if True:  # update_rms:
-        #     self.returns = self.returns * self.gamma + reward_bonus
-        #     self.update_running_avg(self.returns)
-        #
-        # reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
-        # reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
+        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+            self.mean = None
+            self.returns = reward_bonus.clone()
 
-        return reward_bonus.detach().cpu().numpy()
+        if True:  # update_rms:
+            self.returns = self.returns * self.gamma + reward_bonus
+            self.update_running_avg(self.returns)
+
+        reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
+        reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
+
+        return reward_bonus
 
     def _postprocess_torch(self, policy, sample_batch):
         # ADD SAMPLES TO REPLAY
@@ -289,11 +287,11 @@ class DICE(Exploration):
 
     def update_running_avg(self, batch):
         if self.mean is None:
-            self.mean = torch.zeros(batch.shape)
-            self.var = torch.ones(batch.shape)
+            self.mean = 0
+            self.var = 1
             self.count = float(1e-4)
-        batch_mean = torch.mean(batch, dim=0)
-        batch_var = torch.var(batch, dim=0)
+        batch_mean = torch.mean(batch)
+        batch_var = torch.var(batch)
         batch_count = batch.shape[0]
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
