@@ -144,7 +144,8 @@ class DICE(Exploration):
         rs = self.model.g(torch.cat((obs, actions), dim=1))
         vs = self.model.h(obs)
         next_vs = self.model.h(next_obs)
-        return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
+        res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
+        return torch.sigmoid(res)
 
     def _train_step(self):
         batch_size = 200
@@ -168,11 +169,11 @@ class DICE(Exploration):
                                                policy_data.observations[1:],
                                                policy_data.dones[:-1])
 
-                loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
                 # kl divergence
                 # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
                 # GAIL loss
-                # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+                loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
                 self._optimizer.zero_grad()
                 loss.backward()
@@ -186,21 +187,21 @@ class DICE(Exploration):
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
         # policy_d = torch.sigmoid(policy_d)
-        # reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
-        reward_bonus = -policy_d
+        reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
+        # reward_bonus = -policy_d
 
-        if self.returns is None :#or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-            self.mean = None
-            self.returns = reward_bonus.clone().mean()
+        # if self.returns is None: #or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+        #     self.mean = None
+        #     self.returns = reward_bonus.clone()
+        #
+        # if True:  # update_rms:
+        #     self.returns = self.returns * self.gamma + reward_bonus
+        #     self.update_running_avg(self.returns)
 
-        if True:  # update_rms:
-            self.returns = self.returns * self.gamma + reward_bonus.mean()
-            self.update_running_avg(self.returns)
+        # reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
+        # reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
 
-        reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
-        reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
-
-        return reward_bonus
+        return reward_bonus.detach().cpu().numpy()
 
     def _postprocess_torch(self, policy, sample_batch):
         # ADD SAMPLES TO REPLAY
@@ -237,7 +238,7 @@ class DICE(Exploration):
         # # kl divergence
         # # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
         # # GAIL loss
-        # # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+        # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
         # # Perform an optimizer step.
         # self._optimizer.zero_grad()
         # loss.backward()
@@ -287,11 +288,11 @@ class DICE(Exploration):
 
     def update_running_avg(self, batch):
         if self.mean is None:
-            self.mean = 0
-            self.var = 1
+            self.mean = torch.zeros(batch.shape)
+            self.var = torch.ones(batch.shape)
             self.count = float(1e-4)
-        batch_mean = torch.mean(batch)
-        batch_var = torch.var(batch)
+        batch_mean = torch.mean(batch, dim=0)
+        batch_var = torch.var(batch, dim=0)
         batch_count = batch.shape[0]
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
