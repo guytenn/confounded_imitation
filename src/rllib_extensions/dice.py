@@ -170,11 +170,11 @@ class DICE(Exploration):
                                                policy_data.observations[1:],
                                                policy_data.dones[:-1])
 
-                loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
                 # kl divergence
                 # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
                 # GAIL loss
-                # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+                loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
                 self._optimizer.zero_grad()
                 loss.backward()
@@ -187,7 +187,9 @@ class DICE(Exploration):
         policy_dones = torch.from_numpy(samples[SampleBatch.DONES]).float().to(policy.device)
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
-        reward_bonus = -policy_d
+        policy_d = torch.sigmoid(policy_d)
+        reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
+        # reward_bonus = -policy_d
 
         # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
         #     self.mean = None

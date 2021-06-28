@@ -159,10 +159,10 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         return filename
 
 
-def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, seed=0, verbose=False, save_data=False, extra_configs={}):
+def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, seed, extra_configs)
+    test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, 0, seed, extra_configs)
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
@@ -175,6 +175,7 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, see
         reward_total = 0.0
         force_list = []
         task_success = 0.0
+        episode_data = dict(states=[], actions=[], rewards=[], dones=[])
         while not done:
             lengths[episode] += 1
             if coop:
@@ -191,13 +192,18 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=100, coop=False, see
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
                 if save_data:
-                    data['states'].append(prev_obs)
-                    data['actions'].append(action)
-                    data['rewards'].append(reward)
-                    data['dones'].append(done)
+                    episode_data['states'].append(prev_obs)
+                    episode_data['actions'].append(action)
+                    episode_data['rewards'].append(reward)
+                    episode_data['dones'].append(done)
             reward_total += reward
+
             force_list.append(info['total_force_on_human'])
             task_success = info['task_success']
+
+        if reward_total < min_reward_to_save:
+            for key, val in episode_data.items():
+                data[key] += episode_data[key]
 
         rewards.append(reward_total)
         forces.append(np.mean(force_list))
