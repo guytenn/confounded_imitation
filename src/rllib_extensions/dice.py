@@ -145,7 +145,8 @@ class DICE(Exploration):
         vs = self.model.h(obs)
         next_vs = self.model.h(next_obs)
         res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
-        return torch.sigmoid(res)
+        return res
+        # return torch.sigmoid(res)
 
     def _train_step(self):
         batch_size = 200
@@ -169,11 +170,11 @@ class DICE(Exploration):
                                                policy_data.next_observations,
                                                policy_data.dones)
 
-                # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
                 # kl divergence
                 # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
                 # GAIL loss
-                loss = -torch.log(-policy_d).mean() - torch.log(expert_d).mean()
+                # loss = -torch.log(-policy_d).mean() - torch.log(expert_d).mean()
                 # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
                 self._optimizer.zero_grad()
