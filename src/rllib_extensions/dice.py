@@ -79,6 +79,8 @@ class DICE(Exploration):
 
         self.replay_buffer = None
 
+        self.count_i = 0
+
         # This is only used to select the correct action
         self.exploration_submodule = from_config(
             cls=Exploration,
@@ -183,16 +185,16 @@ class DICE(Exploration):
         policy_d = self._forward_model(policy_obs, policy_next_obs, policy_dones)
         reward_bonus = -policy_d
 
-        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-            self.mean = None
-            self.returns = reward_bonus.clone()
-
-        if True:  # update_rms:
-            self.returns = self.returns * self.gamma + reward_bonus
-            self.update_running_avg(self.returns)
-
-        reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
-        reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
+        # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+        #     self.mean = None
+        #     self.returns = reward_bonus.clone()
+        #
+        # if True:  # update_rms:
+        #     self.returns = self.returns * self.gamma + reward_bonus
+        #     self.update_running_avg(self.returns)
+        #
+        # reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
+        # reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
 
         return reward_bonus
 
@@ -211,6 +213,10 @@ class DICE(Exploration):
 
         sample_batch[SampleBatch.REWARDS] = \
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
+
+        # self.count_i += len(sample_batch)
+        # with open('file2.txt', 'a') as f:
+        #     print(self.count_i, file=f)
 
         # TRAIN DICE
         if self.replay_buffer.full or self.replay_buffer.pos > 1000:
