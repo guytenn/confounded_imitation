@@ -43,10 +43,10 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
         expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env.spec.id, 'data_1.h5')
         config["exploration_config"] = {
             "type": DICE,
-            "lr": 0.001,
+            "lr": 0.0001,
             "gamma": config['gamma'],
             "expert_path": expert_data_path,
-            "hidden_dim": 100,
+            "hidden_dim": 300,
             "dice_coef": dice_coef,
             "state_dim": env.observation_space.shape[0],
             "sub_exploration": {
