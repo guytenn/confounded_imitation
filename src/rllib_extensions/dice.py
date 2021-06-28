@@ -151,7 +151,7 @@ class DICE(Exploration):
         batch_size = 200
         dice_epochs = 50
         alpha = 0.9
-        batch_generator = self.replay_buffer.get(len(self.expert_buffer), batch_size)
+        batch_generator = self.replay_buffer.get(5000, batch_size)
 
         for _ in range(dice_epochs):
             for policy_data in batch_generator:
