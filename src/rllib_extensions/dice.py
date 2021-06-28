@@ -69,7 +69,7 @@ class DICE(Exploration):
 
         self.expert_buffer = None
 
-        self.g = self._create_fc_net((state_dim, hidden_dim, hidden_dim, 1), "relu", name="g_net")
+        self.g = self._create_fc_net((state_dim + action_space.shape[0], hidden_dim, hidden_dim, 1), "relu", name="g_net")
         self.h = self._create_fc_net((state_dim, hidden_dim, hidden_dim, 1), "relu", name="h_net")
 
         self.mean = None
@@ -113,7 +113,7 @@ class DICE(Exploration):
         self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'), data['dones'], device=self.device)
 
         self.replay_buffer = CustomReplayBuffer(
-            self.policy_config['train_batch_size'] // self.policy_config['num_workers'],
+            self.policy_config['train_batch_size'], #// self.policy_config['num_workers'],
             self.model.obs_space,
             self.action_space,
             self.device,
@@ -142,8 +142,8 @@ class DICE(Exploration):
         else:
             self._postprocess_torch(policy, sample_batch)
 
-    def _forward_model(self, obs, next_obs, dones):
-        rs = self.model.g(obs)
+    def _forward_model(self, obs, actions, next_obs, dones):
+        rs = self.model.g(torch.cat((obs, actions), dim=1))
         vs = self.model.h(obs)
         next_vs = self.model.h(next_obs)
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
@@ -157,15 +157,18 @@ class DICE(Exploration):
         for _ in range(dice_epochs):
             for policy_data in batch_generator:
                 expert_data = self.expert_buffer.sample(batch_size+1)
-                expert_obs, expert_next_obs, expert_dones = \
-                    expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
 
-                expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+                expert_d = self._forward_model(expert_data.observations[:-1],
+                                               expert_data.actions[:-1],
+                                               expert_data.observations[1:],
+                                               expert_data.dones[:-1])
 
-                policy_states, policy_actions = policy_data.observations, policy_data.actions
                 # if isinstance(self.action_space, spaces.Discrete):
                 #     policy_actions = to_onehot(policy_actions.flatten(), self.model.action_dim)
-                policy_d = self._forward_model(policy_states[:-1], policy_states[1:], policy_data.dones[:-1])
+                policy_d = self._forward_model(policy_data.observations[:-1],
+                                               policy_data.actions[:-1],
+                                               policy_data.observations[1:],
+                                               policy_data.dones[:-1])
 
                 loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
                 # kl divergence
@@ -179,10 +182,11 @@ class DICE(Exploration):
 
     def _predict_reward(self, policy, samples):
         policy_obs = torch.from_numpy(samples[SampleBatch.OBS]).to(policy.device)
+        policy_actions = torch.from_numpy(samples[SampleBatch.ACTIONS]).to(policy.device)
         policy_next_obs = torch.from_numpy(samples[SampleBatch.NEXT_OBS]).to(policy.device)
         policy_dones = torch.from_numpy(samples[SampleBatch.DONES]).float().to(policy.device)
 
-        policy_d = self._forward_model(policy_obs, policy_next_obs, policy_dones)
+        policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
         reward_bonus = -policy_d
 
         # if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):

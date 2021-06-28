@@ -94,7 +94,8 @@ def make_env(env_name, coop=False, seed=1001):
     env.seed(seed)
     return env
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, seed=0, extra_configs={}):
+
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
     agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, coop, seed, extra_configs)
@@ -119,13 +120,14 @@ def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/',
         checkpoint_path = agent.save(os.path.join(save_dir, algo, env_name))
     return checkpoint_path
 
+
 def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, seed=0, n_episodes=1, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env is None:
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, seed, extra_configs)
+    test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, 0, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -246,6 +248,8 @@ if __name__ == '__main__':
                         help='Random seed (default: 1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
+    parser.add_argument('--load', action='store_true', default=False,
+                        help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
                         help='Whether to render a single rollout of a trained policy')
     parser.add_argument('--evaluate', action='store_true', default=False,
@@ -277,7 +281,7 @@ if __name__ == '__main__':
         raise ValueError("dice_coeff must be a value in [0,1]")
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, seed=args.seed)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
