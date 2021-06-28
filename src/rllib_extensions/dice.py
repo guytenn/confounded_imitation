@@ -189,7 +189,7 @@ class DICE(Exploration):
         # reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
         reward_bonus = -policy_d
 
-        if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
+        if self.returns is None :#or (self.returns is not None and self.returns.shape != reward_bonus.shape):
             self.mean = None
             self.returns = reward_bonus.clone()
 
