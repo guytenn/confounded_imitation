@@ -29,6 +29,7 @@ if nn is not None:
 
 from src.data.expert_data import ExpertData
 from src.data.utils import load_h5_dataset
+from src.sb3_extensions.buffers import CustomReplayBuffer
 
 
 class DICE(Exploration):
@@ -76,6 +77,8 @@ class DICE(Exploration):
         self.count = None
         self.returns = None
 
+        self.replay_buffer = None
+
         # This is only used to select the correct action
         self.exploration_submodule = from_config(
             cls=Exploration,
@@ -107,6 +110,14 @@ class DICE(Exploration):
             data['dones'] = np.zeros(len(data['actions']))
         self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'), data['dones'], device=self.device)
 
+        self.replay_buffer = CustomReplayBuffer(
+            self.policy_config['train_batch_size'] // self.policy_config['num_workers'],
+            self.model.obs_space,
+            self.action_space,
+            self.device,
+            optimize_memory_usage=False,
+        )
+
         if self.framework == "torch":
             g_params = list(self.g.parameters())
             h_params = list(self.h.parameters())
@@ -135,46 +146,92 @@ class DICE(Exploration):
         next_vs = self.model.h(next_obs)
         return rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
 
-    def _postprocess_torch(self, policy, sample_batch):
-        policy_obs = torch.from_numpy(sample_batch[SampleBatch.OBS]).to(policy.device)
-        policy_next_obs = torch.from_numpy(sample_batch[SampleBatch.NEXT_OBS]).to(policy.device)
-        policy_dones = torch.from_numpy(sample_batch[SampleBatch.DONES]).float().to(policy.device)
+    def _train_step(self):
+        batch_size = 200
+        dice_epochs = 50
+        alpha = 0.9
+        batch_generator = self.replay_buffer.get(len(self.expert_buffer) // batch_size, batch_size)
+
+        for _ in range(dice_epochs):
+            for policy_data in batch_generator:
+                expert_data = self.expert_buffer.sample(batch_size+1)
+                expert_obs, expert_next_obs, expert_dones = \
+                    expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+
+                expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+
+                policy_states, policy_actions = policy_data.observations, policy_data.actions
+                # if isinstance(self.action_space, spaces.Discrete):
+                #     policy_actions = to_onehot(policy_actions.flatten(), self.model.action_dim)
+                policy_d = self._forward_model(policy_states[:-1], policy_states[1:], policy_data.dones[:-1])
+
+                loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                # kl divergence
+                # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+                # GAIL loss
+                # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+                # Perform an optimizer step.
+                self._optimizer.zero_grad()
+                loss.backward()
+                self._optimizer.step()
+
+    def _predict_reward(self, policy, samples):
+        policy_obs = torch.from_numpy(samples[SampleBatch.OBS]).to(policy.device)
+        policy_next_obs = torch.from_numpy(samples[SampleBatch.NEXT_OBS]).to(policy.device)
+        policy_dones = torch.from_numpy(samples[SampleBatch.DONES]).float().to(policy.device)
 
         policy_d = self._forward_model(policy_obs, policy_next_obs, policy_dones)
-
         reward_bonus = -policy_d
 
         if self.returns is None or (self.returns is not None and self.returns.shape != reward_bonus.shape):
             self.mean = None
             self.returns = reward_bonus.clone()
 
-        if True: #update_rms:
+        if True:  # update_rms:
             self.returns = self.returns * self.gamma + reward_bonus
             self.update_running_avg(self.returns)
 
         reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
         reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
 
-        # Scale intrinsic reward by eta hyper-parameter.
+        return reward_bonus
+
+    def _postprocess_torch(self, policy, sample_batch):
+        # ADD SAMPLES TO REPLAY
+        for i in range(len(sample_batch)):
+            self.replay_buffer.add(sample_batch[SampleBatch.OBS][i:i + 1],
+                                   sample_batch[SampleBatch.NEXT_OBS][i:i + 1],
+                                   sample_batch[SampleBatch.ACTIONS][i:i + 1],
+                                   sample_batch[SampleBatch.REWARDS][i:i + 1],
+                                   sample_batch[SampleBatch.DONES][i:i + 1])
+
+
+        # ESTIMATE REWARD BONUS
+        reward_bonus = self._predict_reward(policy, sample_batch)
+
         sample_batch[SampleBatch.REWARDS] = \
             (1-self.dice_coef) * sample_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
-        expert_data = self.expert_buffer.sample(len(policy_obs) + 1)
-        expert_obs, expert_next_obs, expert_dones = \
-            expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+        # TRAIN DICE
+        if self.replay_buffer.full or self.replay_buffer.pos > 1000:
+            self._train_step()
 
-        expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
-
-        alpha = 0.9
-        loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
-        # kl divergence
-        # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
-        # GAIL loss
-        # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
-        # Perform an optimizer step.
-        self._optimizer.zero_grad()
-        loss.backward()
-        self._optimizer.step()
+        # expert_data = self.expert_buffer.sample(len(policy_obs) + 1)
+        # expert_obs, expert_next_obs, expert_dones = \
+        #     expert_data.observations[:-1], expert_data.observations[1:], expert_data.dones[:-1]
+        #
+        # expert_d = self._forward_model(expert_obs, expert_next_obs, expert_dones)
+        #
+        # alpha = 0.9
+        # loss = alpha * torch.pow(expert_d, 2).mean() + (1-alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+        # # kl divergence
+        # # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+        # # GAIL loss
+        # # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+        # # Perform an optimizer step.
+        # self._optimizer.zero_grad()
+        # loss.backward()
+        # self._optimizer.step()
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return sample_batch
