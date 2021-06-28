@@ -191,10 +191,10 @@ class DICE(Exploration):
 
         if self.returns is None :#or (self.returns is not None and self.returns.shape != reward_bonus.shape):
             self.mean = None
-            self.returns = reward_bonus.clone()
+            self.returns = reward_bonus.clone().mean()
 
         if True:  # update_rms:
-            self.returns = self.returns * self.gamma + reward_bonus
+            self.returns = self.returns * self.gamma + reward_bonus.mean()
             self.update_running_avg(self.returns)
 
         reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
