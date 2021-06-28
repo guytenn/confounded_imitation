@@ -173,7 +173,8 @@ class DICE(Exploration):
                 # kl divergence
                 # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
                 # GAIL loss
-                loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
+                loss = -F.log(-policy_d).mean() - F.log(expert_d).mean()
+                # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
                 self._optimizer.zero_grad()
                 loss.backward()
