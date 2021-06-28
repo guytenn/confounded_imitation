@@ -188,8 +188,8 @@ class DICE(Exploration):
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
         # policy_d = torch.sigmoid(policy_d)
-        reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-8)))
-        # reward_bonus = -policy_d
+        reward_bonus = -policy_d
+        # reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
 
         # if self.returns is None: #or (self.returns is not None and self.returns.shape != reward_bonus.shape):
         #     self.mean = None
@@ -207,11 +207,11 @@ class DICE(Exploration):
     def _postprocess_torch(self, policy, sample_batch):
         # ADD SAMPLES TO REPLAY
         for i in range(len(sample_batch)):
-            self.replay_buffer.add(sample_batch[SampleBatch.OBS][i:i + 1],
-                                   sample_batch[SampleBatch.NEXT_OBS][i:i + 1],
-                                   sample_batch[SampleBatch.ACTIONS][i:i + 1],
-                                   sample_batch[SampleBatch.REWARDS][i:i + 1],
-                                   sample_batch[SampleBatch.DONES][i:i + 1])
+            self.replay_buffer.add(sample_batch[SampleBatch.OBS][i],
+                                   sample_batch[SampleBatch.NEXT_OBS][i],
+                                   sample_batch[SampleBatch.ACTIONS][i],
+                                   sample_batch[SampleBatch.REWARDS][i],
+                                   sample_batch[SampleBatch.DONES][i])
 
 
         # ESTIMATE REWARD BONUS
