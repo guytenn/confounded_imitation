@@ -21,6 +21,7 @@ class ExpertData:
     def sample(self, batch_size: int, env: Optional[VecNormalize] = None, weights=None):
         if weights is None:
             weights = self.weights
+        weights[-1] = 0
         idx = torch.multinomial(weights, batch_size, replacement=True)
 
         data = SimpleNamespace(observations=BaseBuffer._normalize_obs(self.observations[idx], env),
