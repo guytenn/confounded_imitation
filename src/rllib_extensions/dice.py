@@ -142,17 +142,17 @@ class DICE(Exploration):
 
     def _forward_model(self, obs, actions, next_obs, dones):
         rs = self.model.g(torch.cat((obs, actions), dim=1))
-        vs = self.model.h(obs)
-        next_vs = self.model.h(next_obs)
-        res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
+        # vs = self.model.h(obs)
+        # next_vs = self.model.h(next_obs)
+        # res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
         return res
         # return torch.sigmoid(res)
 
     def _train_step(self):
-        batch_size = 200
+        batch_size = 128
         dice_epochs = 50
         alpha = 0.9
-        batch_generator = self.replay_buffer.get(100, batch_size)
+        batch_generator = self.replay_buffer.get(200, batch_size)
 
         for _ in range(dice_epochs):
             for policy_data in batch_generator:

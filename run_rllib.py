@@ -46,7 +46,7 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
             "lr": 0.0001,
             "gamma": config['gamma'],
             "expert_path": expert_data_path,
-            "hidden_dim": 300,
+            "hidden_dim": 100,
             "dice_coef": dice_coef,
             "state_dim": env.observation_space.shape[0],
             "sub_exploration": {
