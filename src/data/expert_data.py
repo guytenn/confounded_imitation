@@ -24,6 +24,7 @@ class ExpertData:
         idx = torch.multinomial(weights, batch_size, replacement=True)
 
         data = SimpleNamespace(observations=BaseBuffer._normalize_obs(self.observations[idx], env),
+                               next_observations=BaseBuffer._normalize_obs(self.observations[idx+1], env),
                                actions=self.actions[idx],
                                dones=self.dones[idx])
 
