@@ -189,8 +189,8 @@ class DICE(Exploration):
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
         # policy_d = torch.sigmoid(policy_d)
-        reward_bonus = -policy_d
-        # reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
+        # reward_bonus = -policy_d
+        reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
 
         # if self.returns is None: #or (self.returns is not None and self.returns.shape != reward_bonus.shape):
         #     self.mean = None
