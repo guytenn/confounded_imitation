@@ -25,7 +25,7 @@ class DressingSawyerEnv(DressingEnv):
     def __init__(self, seed=1001):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False, seed=seed))
+        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), seed=seed)
 register_env('assistive_gym:DressingSawyer-v1', lambda config: DressingSawyerEnv(seed=-1))
 
 class DressingJacoEnv(DressingEnv):
