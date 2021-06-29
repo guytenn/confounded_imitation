@@ -141,7 +141,7 @@ class DICE(Exploration):
             self._postprocess_torch(policy, sample_batch)
 
     def _forward_model(self, obs, actions, next_obs, dones):
-        rs = self.model.g(torch.cat((obs, actions), dim=1)).flatten()
+        rs = self.model.g(torch.cat((obs, actions), dim=1))
         vs = self.model.h(obs)
         next_vs = self.model.h(next_obs)
         res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
@@ -150,7 +150,7 @@ class DICE(Exploration):
 
     def _train_step(self):
         batch_size = 128
-        dice_epochs = 50
+        dice_epochs = 200
         alpha = 0.9
         batch_generator = self.replay_buffer.get(200, batch_size)
 

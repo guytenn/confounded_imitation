@@ -62,6 +62,7 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
         config['env_config'] = {'num_agents': 2}
     return {**config, **extra_configs}
 
+
 def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
         agent = ppo.PPOTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
