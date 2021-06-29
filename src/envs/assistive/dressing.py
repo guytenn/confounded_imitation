@@ -5,8 +5,8 @@ import pybullet as p
 from .env import AssistiveEnv
 
 class DressingEnv(AssistiveEnv):
-    def __init__(self, robot, human):
-        super(DressingEnv, self).__init__(robot=robot, human=human, task='dressing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)))
+    def __init__(self, robot, human, seed=1001):
+        super(DressingEnv, self).__init__(robot=robot, human=human, task='dressing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), seed=seed)
         # self.tt = None
 
     def step(self, action):

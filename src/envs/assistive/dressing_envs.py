@@ -9,6 +9,7 @@ from .agents.panda import Panda
 from .agents.human import Human
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
+import numpy as np
 
 robot_arm = 'left'
 human_controllable_joint_indices = human.left_arm_joints
@@ -21,8 +22,11 @@ class DressingBaxterEnv(DressingEnv):
         super(DressingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False))
 
 class DressingSawyerEnv(DressingEnv):
-    def __init__(self):
-        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False))
+    def __init__(self, seed=1001):
+        if seed == -1:
+            seed = np.random.randint(2 ** 30 - 1)
+        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False, seed=seed))
+register_env('assistive_gym:DressingSawyerEnv-v1', lambda config: DressingSawyerEnv(seed=-1))
 
 class DressingJacoEnv(DressingEnv):
     def __init__(self):
