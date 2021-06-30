@@ -2,7 +2,7 @@
 
 ## Prerequisites
 ```
-pip install numpngw, screeninfo, smplx, trimesh
+pip install numpngw screeninfo smplx trimesh
 pip install 'ray[rllib]' 
 pip install git+https://github.com/Zackory/bullet3.git#egg=pybullet
 ``
