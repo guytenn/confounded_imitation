@@ -43,7 +43,6 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
     if dice_coef > 0:
         expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env.spec.id, 'data_1.h5')
         config["dice_config"] = {
-            "type": DICE,
             "lr": 0.0001,
             "gamma": config['gamma'],
             "features_to_remove": [],
@@ -52,10 +51,8 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
             "dice_coef": dice_coef,
             "action_space": env.action_space,
             "state_dim": env.observation_space.shape[0],
-            "sub_exploration": {
-                "type": "StochasticSampling",
+            'standardize': True
             }
-        }
     # if algo == 'sac':
     #     config['num_workers'] = 1
     if coop:

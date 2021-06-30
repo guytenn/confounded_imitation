@@ -23,6 +23,7 @@ class ImitationModule:
         self.state_dim = dice_config['state_dim']
         self.action_space = dice_config['action_space']
         self.hidden_dim = dice_config['hidden_dim']
+        self.standardize = dice_config["standardize"]
 
         self.expert_buffer = None
         self.g = self._create_fc_net((self.state_dim + self.action_space.shape[0] + 1, self.hidden_dim, self.hidden_dim, 1), "relu",
@@ -123,18 +124,11 @@ class ImitationModule:
         # reward_bonus = -policy_d
         reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
 
-        # if self.returns is None: #or (self.returns is not None and self.returns.shape != reward_bonus.shape):
-        #     self.mean = None
-        #     self.returns = reward_bonus.clone()
-        #
-        # if True:  # update_rms:
-        #     self.returns = self.returns * self.gamma + reward_bonus
-        #     self.update_running_avg(self.returns)
+        reward_bonus = reward_bonus.detach().cpu().numpy()
+        if self.standardize:
+            reward_bonus = reward_bonus / max(1e-4, reward_bonus.std())
 
-        # reward_bonus_std = np.nan_to_num(np.sqrt(self.var.detach().cpu().numpy() + 1e-8), nan=1.0)
-        # reward_bonus = reward_bonus.detach().cpu().numpy() / reward_bonus_std
-
-        return reward_bonus.detach().cpu().numpy()
+        return reward_bonus
 
     def _create_fc_net(self, layer_dims, activation, name=None):
         """Given a list of layer dimensions (incl. input-dim), creates FC-net.
