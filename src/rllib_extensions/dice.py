@@ -69,7 +69,7 @@ class DICE(Exploration):
 
         self.expert_buffer = None
 
-        self.g = self._create_fc_net((state_dim + action_space.shape[0], hidden_dim, hidden_dim, 1), "relu", name="g_net")
+        self.g = self._create_fc_net((state_dim + action_space.shape[0] + 1, hidden_dim, hidden_dim, 1), "relu", name="g_net")
         self.h = self._create_fc_net((state_dim, hidden_dim, hidden_dim, 1), "relu", name="h_net")
 
         self.mean = None
@@ -141,7 +141,7 @@ class DICE(Exploration):
             self._postprocess_torch(policy, sample_batch)
 
     def _forward_model(self, obs, actions, next_obs, dones):
-        rs = self.model.g(torch.cat((obs, actions), dim=1))
+        rs = self.model.g(torch.cat((obs, dones.float(), actions), dim=1))
         vs = self.model.h(obs)
         next_vs = self.model.h(next_obs)
         res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
