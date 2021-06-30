@@ -1,6 +1,7 @@
 import os, sys, multiprocessing, gym, ray, shutil, argparse, importlib, glob
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
+from src.rllib_extensions.imppo import PPOTrainer
 from ray.rllib.agents import ppo, sac
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
@@ -41,13 +42,15 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
     config['framework'] = 'torch'
     if dice_coef > 0:
         expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env.spec.id, 'data_1.h5')
-        config["exploration_config"] = {
+        config["dice_config"] = {
             "type": DICE,
             "lr": 0.0001,
             "gamma": config['gamma'],
+            "features_to_remove": [],
             "expert_path": expert_data_path,
             "hidden_dim": 100,
             "dice_coef": dice_coef,
+            "action_space": env.action_space,
             "state_dim": env.observation_space.shape[0],
             "sub_exploration": {
                 "type": "StochasticSampling",
@@ -65,7 +68,7 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
 
 def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
-        agent = ppo.PPOTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
         agent = sac.SACTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     if policy_path != '':
