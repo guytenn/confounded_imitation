@@ -263,6 +263,8 @@ if __name__ == '__main__':
                         help='Whether to render a single rollout of a trained policy')
     parser.add_argument('--evaluate', action='store_true', default=False,
                         help='Whether to evaluate a trained policy over n_episodes')
+    parser.add_argument('--min_reward_to_save', type=float, default=100,
+                        help='Minimum total reward to save while creating data')
     parser.add_argument('--save-data', action='store_true', default=False,
                         help='Whether to save data of policy over n_episodes')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
@@ -294,5 +296,5 @@ if __name__ == '__main__':
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data)
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data)
 
