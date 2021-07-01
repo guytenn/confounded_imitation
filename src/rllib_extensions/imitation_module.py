@@ -88,7 +88,7 @@ class ImitationModule:
         alpha = 0.9
 
         for _ in range(dice_epochs):
-            for i in range(len(samples) // batch_size):
+            for _ in range(len(samples) // batch_size):
                 expert_data = self.expert_buffer.sample(batch_size)
 
                 expert_d = self._forward_model(expert_data.observations[:, self.features_to_keep],
@@ -99,9 +99,9 @@ class ImitationModule:
                 # if isinstance(self.action_space, spaces.Discrete):
                 #     policy_actions = to_onehot(policy_actions.flatten(), self.model.action_dim)
                 idx = np.random.choice(len(samples), batch_size)
-                policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx, self.features_to_keep]).to(self.device),
+                policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx][:, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.ACTIONS][idx]).to(self.device),
-                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx, self.features_to_keep]).to(self.device),
+                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx][:, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device))
 
                 # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
