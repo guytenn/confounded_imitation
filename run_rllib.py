@@ -18,7 +18,7 @@ from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
 
 
-def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, no_context=False, coop=False, seed=0, extra_configs={}):
     num_processes = multiprocessing.cpu_count()
     if algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
@@ -45,7 +45,7 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
         config["dice_config"] = {
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": [],
+            "features_to_remove": env.unwrapped.context_features if no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": 100,
             "dice_coef": dice_coef,
@@ -63,11 +63,11 @@ def setup_config(env, algo, dice_coef=0, coop=False, seed=0, extra_configs={}):
     return {**config, **extra_configs}
 
 
-def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, coop=False, seed=0, extra_configs={}):
+def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -96,10 +96,10 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, coop, seed, extra_configs)
+    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, coop, seed, extra_configs)
     env.disconnect()
 
     timesteps = 0
@@ -255,6 +255,8 @@ if __name__ == '__main__':
                         help='Random seed (default: 1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
+    parser.add_argument('--no_context', action='store_true', default=False,
+                        help='Remove context for imitation')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
@@ -288,7 +290,7 @@ if __name__ == '__main__':
         raise ValueError("dice_coeff must be a value in [0,1]")
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:

@@ -4,10 +4,13 @@ import pybullet as p
 from .env import AssistiveEnv
 from .agents import furniture
 from .agents.furniture import Furniture
+from types import SimpleNamespace
+
 
 class FeedingEnv(AssistiveEnv):
     def __init__(self, robot, human, seed=1001):
-        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed)
+        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed,
+                                         context_fields=("velocity_weight", "force_nontarget_weight", "high_forces_weight", "food_hit_weight", "food_velocities_weight", "high_pressures_weight", "impairment", "gender", "mass", "radius_scale", "height_scale"))
 
     def step(self, action):
         if self.human.controllable:
@@ -96,9 +99,10 @@ class FeedingEnv(AssistiveEnv):
         target_pos_real, _ = self.robot.convert_to_realworld(self.target_pos)
         self.robot_force_on_human, self.spoon_force_on_human = self.get_total_force()
         self.total_force_on_human = self.robot_force_on_human + self.spoon_force_on_human
-        robot_obs = np.concatenate([spoon_pos_real, spoon_orient_real, spoon_pos_real - target_pos_real, robot_joint_angles, head_pos_real, head_orient_real, [self.spoon_force_on_human]]).ravel()
+        robot_obs = np.concatenate([spoon_pos_real, spoon_orient_real, spoon_pos_real - target_pos_real, robot_joint_angles, head_pos_real, head_orient_real, [self.spoon_force_on_human]])
+        robot_obs_with_context = np.concatenate((robot_obs, self.context_vector)).ravel()
         if agent == 'robot':
-            return robot_obs
+            return robot_obs_with_context
         if self.human.controllable:
             human_joint_angles = self.human.get_joint_angles(self.human.controllable_joint_indices)
             spoon_pos_human, spoon_orient_human = self.human.convert_to_realworld(spoon_pos, spoon_orient)
@@ -108,12 +112,18 @@ class FeedingEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
-        return robot_obs
+            return {'robot': robot_obs_with_context, 'human': human_obs}
+        return robot_obs_with_context
 
     def reset(self):
         super(FeedingEnv, self).reset()
-        self.build_assistive_env('wheelchair')
+
+        self.build_assistive_env('wheelchair',
+                                 human_impairment=self.context['impairment'],
+                                 gender=self.context['gender'],
+                                 mass=self.context['mass'],
+                                 radius_scale=self.context['radius_scale'],
+                                 height_scale=self.context['height_scale'])
         if self.robot.wheelchair_mounted:
             wheelchair_pos, wheelchair_orient = self.furniture.get_base_pos_orient()
             self.robot.set_base_pos_orient(wheelchair_pos + np.array(self.robot.toc_base_pos_offset[self.task]), [0, 0, -np.pi/2.0])

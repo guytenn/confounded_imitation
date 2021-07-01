@@ -18,8 +18,11 @@ from .agents.panda import Panda
 from .agents.tool import Tool
 from .agents.furniture import Furniture
 
+from src.envs.context import Context, Multinomial, GaussianDist, UniformDist, FieldDependentDist
+
+
 class AssistiveEnv(gym.Env):
-    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, seed=1001):
+    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, context_fields=None, seed=1001):
         self.task = task
         self.time_step = time_step
         self.frame_skip = frame_skip
@@ -35,15 +38,24 @@ class AssistiveEnv(gym.Env):
             self.id = p.connect(p.DIRECT)
             self.util = Util(self.id, self.np_random)
 
+        if context_fields is None:
+            self.context_fields = ("velocity_weight", "force_nontarget_weight", "high_forces_weight",
+                                   "food_hit_weight", "food_velocities_weight", "dressing_force_weight",
+                                   "high_pressures_weight", "impairment", "gender", "mass",
+                                   "radius_scale", "height_scale")
+        else:
+            self.context_fields = context_fields
+
         self.directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets')
         self.human_creation = HumanCreation(self.id, np_random=self.np_random, cloth=('dressing' in task))
         self.human_limits_model = load_model(os.path.join(self.directory, 'realistic_arm_limits_model.h5'))
         self.action_robot_len = len(robot.controllable_joint_indices) if robot is not None else 0
         self.action_human_len = len(human.controllable_joint_indices) if human is not None and human.controllable else 0
         self.action_space = spaces.Box(low=np.array([-1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), high=np.array([1.0]*(self.action_robot_len+self.action_human_len), dtype=np.float32), dtype=np.float32)
+        self.context_len = len(self.context_fields)
         self.obs_robot_len = obs_robot_len
         self.obs_human_len = obs_human_len if human is not None and human.controllable else 0
-        self.observation_space = spaces.Box(low=np.array([-1000000000.0]*(self.obs_robot_len+self.obs_human_len), dtype=np.float32), high=np.array([1000000000.0]*(self.obs_robot_len+self.obs_human_len), dtype=np.float32), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.array([-1000000000.0]*(self.obs_robot_len + self.obs_human_len + self.context_len), dtype=np.float32), high=np.array([1000000000.0]*(self.obs_robot_len + self.obs_human_len + self.context_len), dtype=np.float32), dtype=np.float32)
         self.action_space_robot = spaces.Box(low=np.array([-1.0]*self.action_robot_len, dtype=np.float32), high=np.array([1.0]*self.action_robot_len, dtype=np.float32), dtype=np.float32)
         self.action_space_human = spaces.Box(low=np.array([-1.0]*self.action_human_len, dtype=np.float32), high=np.array([1.0]*self.action_human_len, dtype=np.float32), dtype=np.float32)
         self.observation_space_robot = spaces.Box(low=np.array([-1000000000.0]*self.obs_robot_len, dtype=np.float32), high=np.array([1000000000.0]*self.obs_robot_len, dtype=np.float32), dtype=np.float32)
@@ -66,6 +78,18 @@ class AssistiveEnv(gym.Env):
         self.C_fdv = self.config('food_velocities_weight', 'human_preferences')
         self.C_d = self.config('dressing_force_weight', 'human_preferences')
         self.C_p = self.config('high_pressures_weight', 'human_preferences')
+
+        self._mass = {'male': self.config('mass', 'human_male'),
+                      'female': self.config('mass', 'human_female')}
+        self._radius_scale = {'male': self.config('radius_scale', 'human_male'),
+                              'female': self.config('radius_scale', 'human_female')}
+        self._height_scale = {'male': self.config('height_scale', 'human_male'),
+                              'female': self.config('height_scale', 'human_female')}
+
+        self.context_sampler = self.get_default_context_sampler()
+        self.context = None
+        self.context_vector = None
+        self.context_features = list(range(self.obs_robot_len + self.obs_human_len, self.obs_robot_len + self.obs_human_len + self.context_len))
 
     def step(self, action):
         raise NotImplementedError('Implement observations')
@@ -90,6 +114,8 @@ class AssistiveEnv(gym.Env):
         p.disconnect(self.id)
 
     def reset(self):
+        self.sample_context()
+
         p.resetSimulation(physicsClientId=self.id)
         if not self.gui:
             # Reconnect the physics engine to forcefully clear memory when running long training scripts
@@ -112,7 +138,8 @@ class AssistiveEnv(gym.Env):
         self.forces = []
         self.task_success = 0
 
-    def build_assistive_env(self, furniture_type=None, fixed_human_base=True, human_impairment='random', gender='random'):
+    def build_assistive_env(self, furniture_type=None, fixed_human_base=True, human_impairment='random', gender='random',
+                            mass=None, radius_scale=1.0, height_scale=1.0):
         # Build plane, furniture, robot, human, etc. (just like world creation)
         # Load the ground plane
         plane = p.loadURDF(os.path.join(self.directory, 'plane', 'plane.urdf'), physicsClientId=self.id)
@@ -127,7 +154,9 @@ class AssistiveEnv(gym.Env):
             self.agents.append(self.robot)
         # Create human
         if self.human is not None and isinstance(self.human, Human):
-            self.human.init(self.human_creation, self.human_limits_model, fixed_human_base, human_impairment, gender, self.config, self.id, self.np_random)
+            self.human.init(self.human_creation, self.human_limits_model, fixed_human_base, human_impairment, gender,
+                            self.config, self.id, self.np_random,
+                            mass=mass, radius_scale=radius_scale, height_scale=height_scale)
             if self.human.controllable or self.human.impairment == 'tremor':
                 self.agents.append(self.human)
         # Create furniture (wheelchair, bed, or table)
@@ -387,4 +416,58 @@ class AssistiveEnv(gym.Env):
         agent = Agent()
         agent.init(body, self.id, self.np_random, indices=-1)
         return agent
+
+    def get_default_context_sampler(self):
+        gender_dist = Multinomial(p=[0.5] * 2, fields=['male', 'female'])
+        gender_dependent_fields = \
+            FieldDependentDist(
+                base_name="gender",
+                base_dist=gender_dist,
+                dependent_dists=
+                {
+                    gender:
+                        {
+                            "mass": GaussianDist(self._mass[gender], 0.1,
+                                                 clip=(0.7 * self._mass[gender],
+                                                       1.2 * self._mass[gender])),
+                            "radius_scale": GaussianDist(self._radius_scale[gender], 0.1,
+                                                         clip=(0.7 * self._radius_scale[gender],
+                                                               1.2 * self._radius_scale[gender])),
+                            "height_scale": GaussianDist(self._height_scale[gender], 0.1,
+                                                         clip=(0.7 * self._height_scale[gender],
+                                                               1.2 * self._height_scale[gender]))
+                        }
+                    for gender in ["male", "female"]
+                }
+            )
+        context_sampler = Context({"velocity_weight": UniformDist(0.9*self.C_v, 1.1*self.C_v),
+                                   "force_nontarget_weight": UniformDist(0.9*self.C_f, 1.1*self.C_f),
+                                   "high_forces_weight": UniformDist(0.9*self.C_hf, 1.1*self.C_hf),
+                                   "food_hit_weight": UniformDist(0.9*self.C_fd, 1.1*self.C_fd),
+                                   "food_velocities_weight": UniformDist(0.9*self.C_fdv, 1.1*self.C_fdv),
+                                   "dressing_force_weight": UniformDist(0.9*self.C_d, 1.1*self.C_d),
+                                   "high_pressures_weight": UniformDist(0.9*self.C_p, 1.1*self.C_p),
+                                   "impairment": Multinomial(p=[0.25] * 4, fields=['none', 'limits', 'weakness', 'tremor']),
+                                   "gender-mass_radius_height": gender_dependent_fields
+                                   })
+
+        return context_sampler
+
+    def sample_context(self):
+        self.context = self.context_sampler.sample()
+        self.context_vector = np.zeros(len(self.context_fields))
+        for i, field in enumerate(self.context_fields):
+            self.context_vector[i] = self.context[field][0]
+
+        self.C_v = self.context['velocity_weight'][0]
+        self.C_f = self.context['force_nontarget_weight'][0]
+        self.C_hf = self.context['high_forces_weight'][0]
+        self.C_fd = self.context['food_hit_weight'][0]
+        self.C_fdv = self.context['food_velocities_weight'][0]
+        self.C_d = self.context['dressing_force_weight'][0]
+        self.C_p = self.context['high_pressures_weight'][0]
+
+
+
+
 
