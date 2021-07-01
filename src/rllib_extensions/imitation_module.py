@@ -25,10 +25,12 @@ class ImitationModule:
         self.hidden_dim = dice_config['hidden_dim']
         self.standardize = dice_config["standardize"]
 
+        self.features_to_keep = [i for i in range(self.state_dim) if i not in self.features_to_remove]
+
         self.expert_buffer = None
-        self.g = self._create_fc_net((self.state_dim + self.action_space.shape[0] + 1, self.hidden_dim, self.hidden_dim, 1), "relu",
+        self.g = self._create_fc_net((len(self.features_to_keep) + self.action_space.shape[0] + 1, self.hidden_dim, self.hidden_dim, 1), "relu",
                                      name="g_net")
-        self.h = self._create_fc_net((self.state_dim, self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
+        self.h = self._create_fc_net((len(self.features_to_keep), self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
 
         self.mean = None
         self.var = None
@@ -89,17 +91,17 @@ class ImitationModule:
             for i in range(len(samples) // batch_size):
                 expert_data = self.expert_buffer.sample(batch_size)
 
-                expert_d = self._forward_model(expert_data.observations,
+                expert_d = self._forward_model(expert_data.observations[:, self.features_to_keep],
                                                expert_data.actions,
-                                               expert_data.next_observations,
+                                               expert_data.next_observations[:, self.features_to_keep],
                                                expert_data.dones)
 
                 # if isinstance(self.action_space, spaces.Discrete):
                 #     policy_actions = to_onehot(policy_actions.flatten(), self.model.action_dim)
                 idx = np.random.choice(len(samples), batch_size)
-                policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx]).to(self.device),
+                policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.ACTIONS][idx]).to(self.device),
-                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx]).to(self.device),
+                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx], self.features_to_keep).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device))
 
                 # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
@@ -114,9 +116,9 @@ class ImitationModule:
                 self.optimizer.step()
 
     def _predict_reward(self, samples):
-        policy_obs = torch.from_numpy(samples[SampleBatch.OBS]).to(self.device)
+        policy_obs = torch.from_numpy(samples[SampleBatch.OBS][:, self.features_to_keep]).to(self.device)
         policy_actions = torch.from_numpy(samples[SampleBatch.ACTIONS]).to(self.device)
-        policy_next_obs = torch.from_numpy(samples[SampleBatch.NEXT_OBS]).to(self.device)
+        policy_next_obs = torch.from_numpy(samples[SampleBatch.NEXT_OBS][:, self.features_to_keep]).to(self.device)
         policy_dones = torch.from_numpy(samples[SampleBatch.DONES]).float().to(self.device)
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
