@@ -101,7 +101,7 @@ class ImitationModule:
                 idx = np.random.choice(len(samples), batch_size)
                 policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.ACTIONS][idx]).to(self.device),
-                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx], self.features_to_keep).to(self.device),
+                                               torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device))
 
                 # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
