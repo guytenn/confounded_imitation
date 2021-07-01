@@ -163,7 +163,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path, coop, 0, seed, extra_configs)
+    test_agent, _ = load_policy(env, algo, env_name, policy_path=policy_path, coop=coop, seed=seed, extra_configs=extra_configs)
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
