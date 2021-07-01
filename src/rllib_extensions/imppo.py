@@ -273,7 +273,8 @@ def execution_plan(workers: WorkerSet,
             count_steps_by=config["multiagent"]["count_steps_by"],
         ))
 
-    rollouts = rollouts.for_each(ImitationModule(config['dice_config']))
+    if config["dice_config"] is not None:
+        rollouts = rollouts.for_each(ImitationModule(config['dice_config']))
     # Use Dice on rollout to change reward
     # Standardize advantages.
     rollouts = rollouts.for_each(StandardizeFields(["advantages"]))
