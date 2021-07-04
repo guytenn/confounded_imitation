@@ -6,8 +6,9 @@ from .env import AssistiveEnv
 
 
 class DressingEnv(AssistiveEnv):
-    def __init__(self, robot, human, seed=1001):
+    def __init__(self, robot, human, context_params=None, seed=1001):
         super(DressingEnv, self).__init__(robot=robot, human=human, task='dressing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), seed=seed,
+                                          context_params=context_params,
                                           context_fields=("velocity_weight", "force_nontarget_weight", "high_forces_weight", "dressing_force_weight", "high_pressures_weight", "impairment", "gender", "mass", "radius_scale", "height_scale"))
         # self.tt = None
 

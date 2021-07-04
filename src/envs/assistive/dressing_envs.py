@@ -22,11 +22,11 @@ class DressingBaxterEnv(DressingEnv):
         super(DressingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False))
 
 class DressingSawyerEnv(DressingEnv):
-    def __init__(self, seed=1001):
+    def __init__(self, context_params=None, seed=1001):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), seed=seed)
-register_env('assistive_gym:DressingSawyer-v1', lambda config: DressingSawyerEnv(seed=-1))
+        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
+register_env('assistive_gym:DressingSawyer-v1', lambda config: DressingSawyerEnv(context_params=config['context_params'], seed=-1))
 
 class DressingJacoEnv(DressingEnv):
     def __init__(self):
