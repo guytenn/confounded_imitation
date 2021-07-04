@@ -135,10 +135,6 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
     frames = []
     for episode in range(n_episodes):
         obs = env.reset()
-        print('New Reset')
-        print(env.unwrapped.context)
-        print(env.unwrapped.context_features)
-        print(obs)
         done = False
         while not done:
             if coop:
