@@ -59,6 +59,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
                         "impairment": [0.1, 0.1, 0.1, 0.7]
                     }
             }
+    else:
+        config['env_config'] = {'context_params': None}
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
