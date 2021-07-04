@@ -8,8 +8,9 @@ from types import SimpleNamespace
 
 
 class FeedingEnv(AssistiveEnv):
-    def __init__(self, robot, human, seed=1001):
+    def __init__(self, robot, human, context_params=None, seed=1001):
         super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed,
+                                         context_params=context_params,
                                          context_fields=("velocity_weight", "force_nontarget_weight", "high_forces_weight", "food_hit_weight", "food_velocities_weight", "high_pressures_weight", "impairment", "gender", "mass", "radius_scale", "height_scale"))
 
     def step(self, action):

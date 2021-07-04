@@ -18,8 +18,9 @@ from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
 
 
-def setup_config(env, algo, dice_coef=0, no_context=False, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, coop=False, seed=0, extra_configs={}):
     num_processes = multiprocessing.cpu_count()
+    config = dict()
     if algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
         config['train_batch_size'] = 19200
@@ -35,6 +36,29 @@ def setup_config(env, algo, dice_coef=0, no_context=False, coop=False, seed=0, e
         config['Q_model']['fcnet_hiddens'] = [100, 100]
         config['policy_model']['fcnet_hiddens'] = [100, 100]
         # config['normalize_actions'] = False
+
+    if covariate_shift:
+        config['env_config'] = \
+            {
+                'context_params': \
+                    {
+                        "gender": [0.2, 0.8],
+                        "mass_delta": 10,
+                        "mass_std": 20,
+                        "radius_delta": -0.1,
+                        "radius_std": 0.2,
+                        "height_delta": 0.1,
+                        "height_std": 0.2,
+                        "velocity_deltas": [0.1, 0.2],
+                        "force_nontarget_deltas": [0.002, 0.005],
+                        "high_forces_deltas": [0.001, 0.03],
+                        "food_hit_deltas": [-0.5, 1.],
+                        "food_velocities_deltas": [-0.5, 1.],
+                        "dressing_force_deltas": [0, 0.1],
+                        "high_pressures_deltas": [0, 0.1],
+                        "impairment": [0.1, 0.1, 0.1, 0.7]
+                    }
+            }
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
@@ -63,11 +87,11 @@ def setup_config(env, algo, dice_coef=0, no_context=False, coop=False, seed=0, e
     return {**config, **extra_configs}
 
 
-def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, coop=False, seed=0, extra_configs={}):
+def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -96,10 +120,10 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, coop, seed, extra_configs)
+    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, coop, seed, extra_configs)
     env.disconnect()
 
     timesteps = 0
@@ -160,10 +184,10 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         return filename
 
 
-def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
+def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path=policy_path, coop=coop, seed=seed, extra_configs=extra_configs)
+    test_agent, _ = load_policy(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, coop=coop, seed=seed, extra_configs=extra_configs)
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
@@ -257,6 +281,8 @@ if __name__ == '__main__':
                         help='Whether to train a new policy')
     parser.add_argument('--no_context', action='store_true', default=False,
                         help='Remove context for imitation')
+    parser.add_argument('--covariate_shift', action='store_true', default=False,
+                        help='Add covariate shift to environment')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
@@ -295,9 +321,9 @@ if __name__ == '__main__':
         args.seed = np.random.randint(2 ** 30 - 1)
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data)
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, covariate_shift=args.covariate_shift)
 

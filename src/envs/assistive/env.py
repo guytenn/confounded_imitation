@@ -22,7 +22,7 @@ from src.envs.context import Context, Multinomial, GaussianDist, UniformDist, Fi
 
 
 class AssistiveEnv(gym.Env):
-    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, context_fields=None, seed=1001):
+    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, context_fields=None, context_params=None, seed=1001):
         self.task = task
         self.time_step = time_step
         self.frame_skip = frame_skip
@@ -86,7 +86,14 @@ class AssistiveEnv(gym.Env):
         self._height_scale = {'male': self.config('height_scale', 'human_male'),
                               'female': self.config('height_scale', 'human_female')}
 
-        self.context_sampler = self.get_default_context_sampler()
+        if context_params is None:
+            context_params = self.get_default_context_params()
+        self.context_params = context_params
+        self.context_sampler = self.get_default_context_sampler(context_params)
+        with open("context_params.txt", "a") as f:
+            print(context_params, file=f)
+
+
         self.context = None
         self.context_vector = None
         self.context_features = list(range(self.obs_robot_len + self.obs_human_len, self.obs_robot_len + self.obs_human_len + self.context_len))
@@ -427,8 +434,8 @@ class AssistiveEnv(gym.Env):
         agent.init(body, self.id, self.np_random, indices=-1)
         return agent
 
-    def get_default_context_sampler(self):
-        gender_dist = Multinomial(p=[0.5] * 2, fields=['male', 'female'])
+    def get_default_context_sampler(self, context_params):
+        gender_dist = Multinomial(p=context_params['gender'], fields=['male', 'female'])
         gender_dependent_fields = \
             FieldDependentDist(
                 base_name="gender",
@@ -437,31 +444,61 @@ class AssistiveEnv(gym.Env):
                 {
                     gender:
                         {
-                            "mass": GaussianDist(self._mass[gender], 0.1,
-                                                 clip=(0.7 * self._mass[gender],
-                                                       1.2 * self._mass[gender])),
-                            "radius_scale": GaussianDist(self._radius_scale[gender], 0.1,
-                                                         clip=(0.7 * self._radius_scale[gender],
-                                                               1.2 * self._radius_scale[gender])),
-                            "height_scale": GaussianDist(self._height_scale[gender], 0.1,
-                                                         clip=(0.7 * self._height_scale[gender],
-                                                               1.2 * self._height_scale[gender]))
+                            "mass": GaussianDist(self._mass[gender] + context_params['mass_delta'], context_params["mass_std"],
+                                                 clip=(0.7 * (self._mass[gender] + context_params['mass_delta']),
+                                                       1.2 * (self._mass[gender] + context_params['mass_delta']))),
+                            "radius_scale": GaussianDist(self._radius_scale[gender] + context_params['radius_delta'], context_params['radius_std'],
+                                                         clip=(0.7 * (self._radius_scale[gender] + context_params['radius_delta']),
+                                                               1.2 * (self._radius_scale[gender] + context_params['radius_delta']))),
+                            "height_scale": GaussianDist(self._height_scale[gender] + context_params['height_delta'], context_params['height_std'],
+                                                         clip=(0.7 * (self._height_scale[gender] + context_params['height_delta']),
+                                                               1.2 * (self._height_scale[gender] + context_params['height_delta'])))
                         }
                     for gender in ["male", "female"]
                 }
             )
-        context_sampler = Context({"velocity_weight": UniformDist(0.9*self.C_v, 1.1*self.C_v),
-                                   "force_nontarget_weight": UniformDist(0.9*self.C_f, 1.1*self.C_f),
-                                   "high_forces_weight": UniformDist(0.9*self.C_hf, 1.1*self.C_hf),
-                                   "food_hit_weight": UniformDist(0.9*self.C_fd, 1.1*self.C_fd),
-                                   "food_velocities_weight": UniformDist(0.9*self.C_fdv, 1.1*self.C_fdv),
-                                   "dressing_force_weight": UniformDist(0.9*self.C_d, 1.1*self.C_d),
-                                   "high_pressures_weight": UniformDist(0.9*self.C_p, 1.1*self.C_p),
-                                   "impairment": Multinomial(p=[0.25] * 4, fields=['none', 'limits', 'weakness', 'tremor']),
+        context_sampler = Context({"velocity_weight": UniformDist(0.9*(self.C_v + context_params['velocity_deltas'][0]),
+                                                                  1.1*(self.C_v + context_params['velocity_deltas'][1])),
+                                   "force_nontarget_weight": UniformDist(0.9*(self.C_f + context_params['force_nontarget_deltas'][0]),
+                                                                         1.1*(self.C_f + context_params['force_nontarget_deltas'][1])),
+                                   "high_forces_weight": UniformDist(0.9*(self.C_hf + context_params['high_forces_deltas'][0]),
+                                                                     1.1*(self.C_hf + context_params['high_forces_deltas'][1])),
+                                   "food_hit_weight": UniformDist(0.9*(self.C_fd + context_params['food_hit_deltas'][0]),
+                                                                  1.1*(self.C_fd + context_params['food_hit_deltas'][1])),
+                                   "food_velocities_weight": UniformDist(0.9*(self.C_fdv + context_params['food_velocities_deltas'][0]),
+                                                                         1.1*(self.C_fdv + context_params['food_velocities_deltas'][1])),
+                                   "dressing_force_weight": UniformDist(0.9*(self.C_d + context_params['dressing_force_deltas'][0]),
+                                                                        1.1*(self.C_d + context_params['dressing_force_deltas'][1])),
+                                   "high_pressures_weight": UniformDist(0.9*(self.C_p + context_params['high_pressures_deltas'][0]),
+                                                                        1.1*(self.C_p + context_params['high_pressures_deltas'][1])),
+                                   "impairment": Multinomial(p=context_params['impairment'], fields=['none', 'limits', 'weakness', 'tremor']),
                                    "gender-mass_radius_height": gender_dependent_fields
                                    })
 
         return context_sampler
+
+
+    def get_default_context_params(self):
+        context_params = \
+        {
+            "gender": [0.5, 0.5],
+            "mass_delta": 0,
+            "mass_std": 10,
+            "radius_delta": 0,
+            "radius_std": 0.1,
+            "height_delta": 0,
+            "height_std": 0.1,
+            "velocity_deltas": [0, 0],
+            "force_nontarget_deltas": [0, 0],
+            "high_forces_deltas": [0, 0],
+            "food_hit_deltas": [0, 0],
+            "food_velocities_deltas": [0, 0],
+            "dressing_force_deltas": [0, 0],
+            "high_pressures_deltas": [0, 0],
+            "impairment": [0.25, 0.25, 0.25, 0.25]
+        }
+
+        return context_params
 
     def sample_context(self):
         self.context = self.context_sampler.sample()

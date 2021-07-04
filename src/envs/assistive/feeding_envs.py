@@ -24,11 +24,11 @@ class FeedingBaxterEnv(FeedingEnv):
         super(FeedingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), seed=seed)
 
 class FeedingSawyerEnv(FeedingEnv):
-    def __init__(self, seed=1001):
+    def __init__(self, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(FeedingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), seed=seed)
-register_env('assistive_gym:FeedingSawyer-v1', lambda config: FeedingSawyerEnv(seed=-1))
+        super(FeedingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
+register_env('assistive_gym:FeedingSawyer-v1', lambda config: FeedingSawyerEnv(context_params=config['context_params'], seed=-1))
 
 class FeedingJacoEnv(FeedingEnv):
     def __init__(self, seed=1001):
