@@ -138,8 +138,18 @@ class AssistiveEnv(gym.Env):
         self.forces = []
         self.task_success = 0
 
-    def build_assistive_env(self, furniture_type=None, fixed_human_base=True, human_impairment='random', gender='random',
-                            mass=None, radius_scale=1.0, height_scale=1.0):
+    def build_assistive_env(self, furniture_type=None, fixed_human_base=True, human_impairment=None, gender=None,
+                            mass=None, radius_scale=None, height_scale=None):
+        if human_impairment is None:
+            human_impairment = self.context['impairment'][1]
+        if gender is None:
+            gender = self.context['gender'][1]
+        if mass is None:
+            mass = self.context['mass'][0]
+        if radius_scale is None:
+            radius_scale = self.context['radius_scale'][0]
+        if height_scale is None:
+            height_scale = self.context['height_scale'][0]
         # Build plane, furniture, robot, human, etc. (just like world creation)
         # Load the ground plane
         plane = p.loadURDF(os.path.join(self.directory, 'plane', 'plane.urdf'), physicsClientId=self.id)

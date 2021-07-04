@@ -118,12 +118,7 @@ class FeedingEnv(AssistiveEnv):
     def reset(self):
         super(FeedingEnv, self).reset()
 
-        self.build_assistive_env('wheelchair',
-                                 human_impairment=self.context['impairment'],
-                                 gender=self.context['gender'],
-                                 mass=self.context['mass'],
-                                 radius_scale=self.context['radius_scale'],
-                                 height_scale=self.context['height_scale'])
+        self.build_assistive_env('wheelchair')
         if self.robot.wheelchair_mounted:
             wheelchair_pos, wheelchair_orient = self.furniture.get_base_pos_orient()
             self.robot.set_base_pos_orient(wheelchair_pos + np.array(self.robot.toc_base_pos_offset[self.task]), [0, 0, -np.pi/2.0])
