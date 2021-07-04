@@ -255,8 +255,8 @@ if __name__ == '__main__':
                         help='Environment to train on (default: ScratchItchJaco-v0)')
     parser.add_argument('--algo', default='ppo',
                         help='Reinforcement learning algorithm')
-    parser.add_argument('--seed', type=int, default=1,
-                        help='Random seed (default: 1)')
+    parser.add_argument('--seed', type=int, default=-1,
+                        help='Random seed (default: -1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
     parser.add_argument('--no_context', action='store_true', default=False,
@@ -294,6 +294,9 @@ if __name__ == '__main__':
 
     if args.dice_coef < 0 or args.dice_coef > 1:
         raise ValueError("dice_coeff must be a value in [0,1]")
+
+    if args.seed == -1:
+        args.seed = np.random.randint(2 ** 30 - 1)
 
     if args.train:
         checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context)
