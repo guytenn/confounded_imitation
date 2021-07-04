@@ -4,6 +4,7 @@ import pybullet as p
 
 from .env import AssistiveEnv
 
+
 class DressingEnv(AssistiveEnv):
     def __init__(self, robot, human, seed=1001):
         super(DressingEnv, self).__init__(robot=robot, human=human, task='dressing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), seed=seed)
@@ -93,9 +94,11 @@ class DressingEnv(AssistiveEnv):
         self.cloth_force_sum = np.sum(np.linalg.norm(self.cloth_forces, axis=-1))
         self.robot_force_on_human = np.sum(self.robot.get_contact_points(self.human)[-1])
         self.total_force_on_human = self.robot_force_on_human + self.cloth_force_sum
-        robot_obs = np.concatenate([end_effector_pos_real, end_effector_orient_real, robot_joint_angles, shoulder_pos_real, elbow_pos_real, wrist_pos_real, [self.cloth_force_sum]]).ravel()
+        robot_obs = np.concatenate([end_effector_pos_real, end_effector_orient_real, robot_joint_angles, shoulder_pos_real, elbow_pos_real, wrist_pos_real, [self.cloth_force_sum]])
+        robot_obs_with_context = np.concatenate((robot_obs, self.context_vector)).ravel()
+
         if agent == 'robot':
-            return robot_obs
+            return robot_obs_with_context
         if self.human.controllable:
             human_joint_angles = self.human.get_joint_angles(self.human.controllable_joint_indices)
             end_effector_pos_human, end_effector_orient_human = self.human.convert_to_realworld(end_effector_pos, end_effector_orient)
@@ -106,8 +109,8 @@ class DressingEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
-        return robot_obs
+            return {'robot': robot_obs_with_context, 'human': human_obs}
+        return robot_obs_with_context
 
     def reset(self):
         super(DressingEnv, self).reset()
