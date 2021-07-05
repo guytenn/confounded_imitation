@@ -4,8 +4,13 @@ import pybullet as p
 from .env import AssistiveEnv
 
 class DrinkingEnv(AssistiveEnv):
-    def __init__(self, robot, human):
-        super(DrinkingEnv, self).__init__(robot=robot, human=human, task='drinking', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)))
+    def __init__(self, robot, human, context_params=None, seed=1001):
+        super(DrinkingEnv, self).__init__(robot=robot, human=human, task='drinking', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed,
+                                          context_params=context_params,
+                                          context_fields=(
+                                          "velocity_weight", "force_nontarget_weight", "high_forces_weight",
+                                          "food_hit_weight", "food_velocities_weight", "high_pressures_weight",
+                                          "impairment", "gender", "mass", "radius_scale", "height_scale"))
 
     def step(self, action):
         if self.human.controllable:
@@ -104,9 +109,11 @@ class DrinkingEnv(AssistiveEnv):
         target_pos_real, _ = self.robot.convert_to_realworld(self.target_pos)
         self.robot_force_on_human, self.cup_force_on_human = self.get_total_force()
         self.total_force_on_human = self.robot_force_on_human + self.cup_force_on_human
-        robot_obs = np.concatenate([cup_pos_real, cup_orient_real, cup_pos_real - target_pos_real, robot_joint_angles, head_pos_real, head_orient_real, [self.cup_force_on_human]]).ravel()
+        robot_obs = np.concatenate([cup_pos_real, cup_orient_real, cup_pos_real - target_pos_real, robot_joint_angles, head_pos_real, head_orient_real, [self.cup_force_on_human]])
+        robot_obs_with_context = np.concatenate((robot_obs, self.context_vector)).ravel()
+
         if agent == 'robot':
-            return robot_obs
+            return robot_obs_with_context
         if self.human.controllable:
             human_joint_angles = self.human.get_joint_angles(self.human.controllable_joint_indices)
             cup_pos_human, cup_orient_human = self.human.convert_to_realworld(cup_pos, cup_orient)
@@ -116,8 +123,8 @@ class DrinkingEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
-        return robot_obs
+            return {'robot': robot_obs_with_context, 'human': human_obs}
+        return robot_obs_with_context
 
     def reset(self):
         super(DrinkingEnv, self).reset()

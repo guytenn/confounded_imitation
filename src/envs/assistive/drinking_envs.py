@@ -9,6 +9,7 @@ from .agents.panda import Panda
 from .agents.human import Human
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
+import numpy as np
 
 robot_arm = 'right'
 human_controllable_joint_indices = human.head_joints
@@ -21,8 +22,11 @@ class DrinkingBaxterEnv(DrinkingEnv):
         super(DrinkingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False))
 
 class DrinkingSawyerEnv(DrinkingEnv):
-    def __init__(self):
-        super(DrinkingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False))
+    def __init__(self, context_params=None, seed=-1):
+        if seed == -1:
+            seed = np.random.randint(2 ** 30 - 1)
+        super(DrinkingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
+register_env('assistive_gym:DrinkingSawyer-v1', lambda config: DrinkingSawyerEnv(context_params=config['context_params'], seed=-1))
 
 class DrinkingJacoEnv(DrinkingEnv):
     def __init__(self):
