@@ -18,8 +18,9 @@ from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
 
 
-def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, coop=False, seed=0, extra_configs={}):
-    num_processes = multiprocessing.cpu_count()
+def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
+    if num_processes is None:
+        num_processes = multiprocessing.cpu_count()
     config = dict()
     if algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
@@ -89,11 +90,11 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
     return {**config, **extra_configs}
 
 
-def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, coop=False, seed=0, extra_configs={}):
+def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
     if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -122,10 +123,10 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, coop, seed, extra_configs)
+    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, num_processes, covariate_shift, coop, seed, extra_configs)
     env.disconnect()
 
     timesteps = 0
@@ -154,7 +155,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path, 0, False, coop, seed, extra_configs)
+    test_agent, _ = load_policy(env, algo, env_name, policy_path, 0, False, 1, coop, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -285,6 +286,8 @@ if __name__ == '__main__':
                         help='Remove context for imitation')
     parser.add_argument('--covariate_shift', action='store_true', default=False,
                         help='Add covariate shift to environment')
+    parser.add_argument('--num-processes', type=int, default=-1,
+                        help='Number of workers during training (default = -1, use all cpus)')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
@@ -322,8 +325,11 @@ if __name__ == '__main__':
     if args.seed == -1:
         args.seed = np.random.randint(2 ** 30 - 1)
 
+    if args.num_processes == -1:
+        args.num_processes = None
+
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
