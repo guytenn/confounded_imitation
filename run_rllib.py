@@ -16,6 +16,7 @@ import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
+import ray.rllib.env.wrappers.recsim_wrapper
 
 
 def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
