@@ -2,7 +2,7 @@ import os, sys, multiprocessing, gym, ray, shutil, argparse, importlib, glob
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
-from ray.rllib.agents import ppo, sac
+from ray.rllib.agents import ppo, sac, slateq
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
 try:
@@ -37,31 +37,33 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
         config['Q_model']['fcnet_hiddens'] = [100, 100]
         config['policy_model']['fcnet_hiddens'] = [100, 100]
         # config['normalize_actions'] = False
-
-    if covariate_shift:
-        config['env_config'] = \
-            {
-                'context_params': \
-                    {
-                        "gender": [0.2, 0.8],
-                        "mass_delta": 10,
-                        "mass_std": 20,
-                        "radius_delta": -0.1,
-                        "radius_std": 0.2,
-                        "height_delta": 0.1,
-                        "height_std": 0.2,
-                        "velocity_deltas": [0.1, 0.2],
-                        "force_nontarget_deltas": [0.002, 0.005],
-                        "high_forces_deltas": [0.001, 0.03],
-                        "food_hit_deltas": [-0.5, 1.],
-                        "food_velocities_deltas": [-0.5, 1.],
-                        "dressing_force_deltas": [0, 0.1],
-                        "high_pressures_deltas": [0, 0.1],
-                        "impairment": [0.1, 0.1, 0.1, 0.7]
-                    }
-            }
-    else:
-        config['env_config'] = {'context_params': None}
+    elif algo == 'slateq':
+        config = slateq.DEFAULT_CONFIG.copy()
+    if algo != 'slateq': #TODO: Make Recsim work with covariate shift
+        if covariate_shift:
+            config['env_config'] = \
+                {
+                    'context_params': \
+                        {
+                            "gender": [0.2, 0.8],
+                            "mass_delta": 10,
+                            "mass_std": 20,
+                            "radius_delta": -0.1,
+                            "radius_std": 0.2,
+                            "height_delta": 0.1,
+                            "height_std": 0.2,
+                            "velocity_deltas": [0.1, 0.2],
+                            "force_nontarget_deltas": [0.002, 0.005],
+                            "high_forces_deltas": [0.001, 0.03],
+                            "food_hit_deltas": [-0.5, 1.],
+                            "food_velocities_deltas": [-0.5, 1.],
+                            "dressing_force_deltas": [0, 0.1],
+                            "high_pressures_deltas": [0, 0.1],
+                            "impairment": [0.1, 0.1, 0.1, 0.7]
+                        }
+                }
+        else:
+            config['env_config'] = {'context_params': None}
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
@@ -95,6 +97,8 @@ def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=F
         agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
     elif algo == 'sac':
         agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+    elif algo == 'slateq':
+        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -125,7 +129,7 @@ def make_env(env_name, coop=False, seed=1001):
 
 
 def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
-    ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
+    # ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop)
     agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs)
     env.disconnect()
@@ -277,7 +281,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RL for Assistive Gym')
     parser.add_argument('--env', default='FeedingSawyer-v1',
                         help='Environment to train on (default: ScratchItchJaco-v0)')
-    parser.add_argument('--algo', default='ppo',
+    parser.add_argument('--algo', default='ppo', choices=['ppo', 'sac', 'slateq'],
                         help='Reinforcement learning algorithm')
     parser.add_argument('--seed', type=int, default=-1,
                         help='Random seed (default: -1)')
