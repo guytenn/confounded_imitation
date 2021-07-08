@@ -16,7 +16,7 @@ import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
-import ray.rllib.env.wrappers.recsim_wrapper
+from ray.rllib.env.wrappers.recsim_wrapper import make_recsim_env
 
 
 def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
@@ -131,7 +131,11 @@ def make_env(env_name, coop=False, seed=1001):
 
 def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-    env = make_env(env_name, coop)
+    if env_name == 'RecSim-v1':
+        env = make_recsim_env({})
+    else:
+        env = make_env(env_name, coop)
+
     agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs)
     env.disconnect()
 
