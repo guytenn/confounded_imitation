@@ -107,6 +107,7 @@ def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=F
                 checkpoint_max = max(files_ints)
                 checkpoint_num = files_ints.index(checkpoint_max)
                 checkpoint_path = os.path.join(directory, 'checkpoint_%s' % files[checkpoint_num], 'checkpoint-%d' % checkpoint_max)
+                print(f'Restoring checkpoint in {checkpoint_path}')
                 agent.restore(checkpoint_path)
                 # return agent, checkpoint_path
             return agent, None
