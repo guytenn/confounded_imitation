@@ -2,7 +2,8 @@ import os, sys, multiprocessing, gym, ray, shutil, argparse, importlib, glob
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
-from ray.rllib.agents import ppo, sac, slateq
+from ray.rllib.agents import ppo, sac
+from src.rllib_extensions import slateq
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
 try:
@@ -94,12 +95,16 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
 
 
 def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
+    if env_name != "RecSim-v1":
+        rllib_env_name = 'assistive_gym:'+env_name
+    else:
+        rllib_env_name = env_name
     if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), 'assistive_gym:'+env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
     elif algo == 'slateq':
-        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), env_name)
+        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -132,12 +137,13 @@ def make_env(env_name, coop=False, seed=1001):
 def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v1':
-        env = make_recsim_env({})
+        env = None
+        # env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-
     agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs)
-    env.disconnect()
+    if env is not None:
+        env.disconnect()
 
     timesteps = 0
     while timesteps < timesteps_total:
