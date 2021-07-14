@@ -30,6 +30,8 @@ from ray.rllib.policy.policy import Policy
 from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
+from src.rllib_extensions.imitation_module import ImitationModule
+
 logger = logging.getLogger(__name__)
 
 # Defines all SlateQ strategies implemented.
@@ -129,6 +131,7 @@ DEFAULT_CONFIG = with_common_config({
     "slateq_strategy": "QL",
     # user/doc embedding size for the recsim environment
     "recsim_embedding_size": 20,
+    "dice_config": None
 })
 # __sphinx_doc_end__
 # yapf: enable
@@ -184,18 +187,24 @@ def execution_plan(workers: WorkerSet,
     # (2) Read and train on experiences from the replay buffer. Every batch
     # returned from the LocalReplay() iterator is passed to TrainOneStep to
     # take a SGD step.
-    replay_op = Replay(local_buffer=local_replay_buffer) \
-        .for_each(TrainOneStep(workers))
+    replay_buffer = Replay(local_buffer=local_replay_buffer)
+    replay_op = replay_buffer.for_each(TrainOneStep(workers))
+
+    if config["dice_config"] is not None:
+        imitation_op = replay_buffer.for_each(ImitationModule(config['dice_config']))
+        ops = [store_op, imitation_op, replay_op]
+    else:
+        ops = [store_op, replay_op]
 
     if config["slateq_strategy"] != "RANDOM":
         # Alternate deterministically between (1) and (2). Only return the
         # output of (2) since training metrics are not available until (2)
         # runs.
         train_op = Concurrently(
-            [store_op, replay_op],
+            ops,
             mode="round_robin",
             output_indexes=[1],
-            round_robin_weights=calculate_round_robin_weights(config))
+            round_robin_weights=[1]*len(ops))
     else:
         # No training is needed for the RANDOM strategy.
         train_op = rollouts

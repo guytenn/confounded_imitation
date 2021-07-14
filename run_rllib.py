@@ -17,7 +17,7 @@ import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
-from ray.rllib.env.wrappers.recsim_wrapper import make_recsim_env
+from src.rllib_extensions.recsim_wrapper import make_recsim_env
 
 
 def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
@@ -41,48 +41,59 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
         # config['normalize_actions'] = False
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
-    if algo != 'slateq': #TODO: Make Recsim work with covariate shift
-        if covariate_shift:
-            config['env_config'] = \
-                {
-                    'context_params': \
-                        {
-                            "gender": [0.2, 0.8],
-                            "mass_delta": 10,
-                            "mass_std": 20,
-                            "radius_delta": -0.1,
-                            "radius_std": 0.2,
-                            "height_delta": 0.1,
-                            "height_std": 0.2,
-                            "velocity_deltas": [0.1, 0.2],
-                            "force_nontarget_deltas": [0.002, 0.005],
-                            "high_forces_deltas": [0.001, 0.03],
-                            "food_hit_deltas": [-0.5, 1.],
-                            "food_velocities_deltas": [-0.5, 1.],
-                            "dressing_force_deltas": [0, 0.1],
-                            "high_pressures_deltas": [0, 0.1],
-                            "impairment": [0.1, 0.1, 0.1, 0.7]
-                        }
-                }
-        else:
-            config['env_config'] = {'context_params': None}
+    if covariate_shift:
+        config['env_config'] = \
+            {
+                'context_params': \
+                    {
+                        "gender": [0.2, 0.8],
+                        "mass_delta": 10,
+                        "mass_std": 20,
+                        "radius_delta": -0.1,
+                        "radius_std": 0.2,
+                        "height_delta": 0.1,
+                        "height_std": 0.2,
+                        "velocity_deltas": [0.1, 0.2],
+                        "force_nontarget_deltas": [0.002, 0.005],
+                        "high_forces_deltas": [0.001, 0.03],
+                        "food_hit_deltas": [-0.5, 1.],
+                        "food_velocities_deltas": [-0.5, 1.],
+                        "dressing_force_deltas": [0, 0.1],
+                        "high_pressures_deltas": [0, 0.1],
+                        "impairment": [0.1, 0.1, 0.1, 0.7]
+                    }
+            }
+    else:
+        config['env_config'] = {'context_params': None}
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
     if dice_coef > 0:
-        expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env.spec.id, 'data_1.h5')
+        env_name = 'RecSim-v1' if env.spec is None else env.spec.id
+        expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env_name, 'data_1.h5')
+
+        if env_name == 'RecSim-v1':
+            state_dim = config["recsim_embedding_size"]
+            airl = False
+        else:
+            state_dim = env.observation_space.shape[0]
+            airl = True
+
         config["dice_config"] = {
+            "env_name": env_name,
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": env.unwrapped.context_features if no_context else [],
+            "features_to_remove": [],# env.unwrapped.context_features if no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": 100,
             "dice_coef": dice_coef,
+            "observation_space": env.observation_space,
             "action_space": env.action_space,
-            "state_dim": env.observation_space.shape[0],
-            'standardize': True
+            "state_dim": state_dim,
+            'standardize': True,  # This seems quite important (normalize reward according to batch)
+            "airl": airl
             }
     # if algo == 'sac':
     #     config['num_workers'] = 1
@@ -125,7 +136,10 @@ def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=F
 
 def make_env(env_name, coop=False, seed=1001):
     if not coop:
-        env = gym.make(env_name)
+        if env_name == 'RecSim-v1':
+            env = make_recsim_env({})
+        else:
+            env = gym.make(env_name)
     else:
         module = importlib.import_module('assistive_gym.envs')
         env_class = getattr(module, env_name.split('-')[0] + 'Env')
@@ -137,12 +151,12 @@ def make_env(env_name, coop=False, seed=1001):
 def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v1':
-        env = None
-        # env = make_recsim_env({})
+        # env = None
+        env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
     agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs)
-    if env is not None:
+    if env_name != 'RecSim-v1':
         env.disconnect()
 
     timesteps = 0
@@ -236,35 +250,41 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
                 if save_data:
-                    episode_data['states'].append(prev_obs)
-                    episode_data['actions'].append(action)
+                    if env_name == 'RecSim-v1':
+                        episode_data['states'].append(prev_obs['user'])
+                        episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
+                    else:
+                        episode_data['states'].append(prev_obs)
+                        episode_data['actions'].append(action)
                     episode_data['rewards'].append(reward)
                     episode_data['dones'].append(done)
             reward_total += reward
 
-            force_list.append(info['total_force_on_human'])
-            task_success = info['task_success']
+            # force_list.append(info['total_force_on_human'])
+            # task_success = info['task_success']
 
-        if reward_total < min_reward_to_save:
+        if reward_total > min_reward_to_save:
             for key, val in episode_data.items():
                 data[key] += episode_data[key]
 
         rewards.append(reward_total)
-        forces.append(np.mean(force_list))
-        task_successes.append(task_success)
+        # forces.append(np.mean(force_list))
+        # task_successes.append(task_success)
         if verbose:
-            print('Reward total: %.2f, mean force: %.2f, task success: %r' % (reward_total, np.mean(force_list), task_success))
+            # print('Reward total: %.2f, mean force: %.2f, task success: %r' % (reward_total, np.mean(force_list), task_success))
+            print('Reward total: %.2f,vtask success: %r' % (reward_total, task_success))
+
         sys.stdout.flush()
-    env.disconnect()
+    # env.disconnect()
 
     print('\n', '-'*50, '\n')
     # print('Rewards:', rewards)
     print('Reward Mean:', np.mean(rewards))
     print('Reward Std:', np.std(rewards))
 
-    # print('Forces:', forces)
-    print('Force Mean:', np.mean(forces))
-    print('Force Std:', np.std(forces))
+    # # print('Forces:', forces)
+    # print('Force Mean:', np.mean(forces))
+    # print('Force Std:', np.std(forces))
 
     # print('Task Successes:', task_successes)
     print('Task Success Mean:', np.mean(task_successes))
@@ -310,7 +330,7 @@ if __name__ == '__main__':
                         help='Whether to render a single rollout of a trained policy')
     parser.add_argument('--evaluate', action='store_true', default=False,
                         help='Whether to evaluate a trained policy over n_episodes')
-    parser.add_argument('--min_reward_to_save', type=float, default=100,
+    parser.add_argument('--min_reward_to_save', type=float, default=0,
                         help='Minimum total reward to save while creating data')
     parser.add_argument('--save-data', action='store_true', default=False,
                         help='Whether to save data of policy over n_episodes')

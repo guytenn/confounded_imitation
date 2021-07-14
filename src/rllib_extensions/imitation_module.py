@@ -12,30 +12,25 @@ from src.sb3_extensions.buffers import CustomReplayBuffer
 import numpy as np
 import GPUtil
 
+from src.rllib_extensions.recsim_wrapper import restore_samples
+
 
 class ImitationModule:
     def __init__(self, dice_config):
+        self.is_recsim = dice_config['env_name'] == 'RecSim-v1'
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
         self.features_to_remove = dice_config['features_to_remove']
         self.dice_coef = dice_config['dice_coef']
         self.lr = dice_config['lr']
         self.state_dim = dice_config['state_dim']
+        self.observation_space = dice_config['observation_space']
         self.action_space = dice_config['action_space']
         self.hidden_dim = dice_config['hidden_dim']
         self.standardize = dice_config["standardize"]
+        self.airl = dice_config["airl"]
 
         self.features_to_keep = [i for i in range(self.state_dim) if i not in self.features_to_remove]
-
-        self.expert_buffer = None
-        self.g = self._create_fc_net((len(self.features_to_keep) + self.action_space.shape[0] + 1, self.hidden_dim, self.hidden_dim, 1), "relu",
-                                     name="g_net")
-        self.h = self._create_fc_net((len(self.features_to_keep), self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
-
-        self.mean = None
-        self.var = None
-        self.count = None
-        self.returns = None
 
         try:
             deviceIds = GPUtil.getFirstAvailable(order='memory', maxLoad=0.95, maxMemory=0.95)
@@ -43,49 +38,79 @@ class ImitationModule:
         except:
             self.device = torch.device('cpu')
 
+        self.expert_buffer = None
+
         data = load_h5_dataset(self.expert_path)
         if 'dones' not in data.keys():
             data['dones'] = np.zeros(len(data['actions']))
         self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'),
                                         data['dones'], device=self.device)
 
-        g_params = list(self.g.parameters())
-        h_params = list(self.h.parameters())
-
-        # Now that the Policy's own optimizer(s) have been created (from
-        # the Model parameters (IMPORTANT: w/o(!) the curiosity params),
-        # we can add our curiosity sub-modules to the Policy's Model.
+        if self.is_recsim:
+            input_shape = len(self.features_to_keep) + self.state_dim * self.action_space.shape[0] + 1
+        else:
+            input_shape = len(self.features_to_keep) + self.action_space.shape[0] + 1
+        self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
+        opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
-        self.h = self.h.to(self.device)
-        self.optimizer = torch.optim.Adam(g_params + h_params, lr=self.lr)
+        if self.airl:
+            self.h = self._create_fc_net((len(self.features_to_keep), self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
+            self.h = self.h.to(self.device)
+            opt_params += list(self.h.parameters())
+
+        self.optimizer = torch.optim.Adam(opt_params, lr=self.lr)
+
+        self.mean = None
+        self.var = None
+        self.count = None
+        self.returns = None
 
 
     def __call__(self, samples: SampleBatch) -> SampleBatch:
+        if self.is_recsim:
+            samples_batch = samples.policy_batches['default_policy']
+            s, a = restore_samples(samples_batch[SampleBatch.OBS],
+                                   samples_batch[SampleBatch.ACTIONS],
+                                   self.observation_space)
+
+            samples_input = {SampleBatch.OBS: s,
+                             SampleBatch.ACTIONS: a,
+                             SampleBatch.DONES: samples_batch[SampleBatch.DONES],
+                             SampleBatch.NEXT_OBS: s}
+        else:
+            samples_batch = samples_input = samples
         # ESTIMATE REWARD BONUS
-        reward_bonus = self._predict_reward(samples)
+        reward_bonus = self._predict_reward(samples_input)
 
         # TRAIN DICE
-        self._train(samples)
+        self._train(samples_input)
 
-        samples[SampleBatch.REWARDS] = \
-            (1 - self.dice_coef) * samples[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
+        samples_batch[SampleBatch.REWARDS] = \
+            (1 - self.dice_coef) * samples_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples
 
 
     def _forward_model(self, obs, actions, next_obs, dones):
-        rs = self.g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1))
-        vs = self.h(obs)
-        next_vs = self.h(next_obs)
-        res = rs.flatten() + self.gamma * (1 - dones.float()) * next_vs.flatten() - vs.flatten()
-        # return rs
+        rs = self.g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1)).flatten()
+        if self.airl:
+            vs = self.h(obs).flatten()
+            next_vs = self.h(next_obs).flatten()
+            res = rs + self.gamma * (1 - dones.float()) * next_vs - vs
+        else:
+            res = rs
         return torch.sigmoid(res)
 
     def _train(self, samples):
-        batch_size = 128
-        dice_epochs = 50
-        alpha = 0.9
+        if self.is_recsim:
+            batch_size = len(samples)
+            dice_epochs = 1
+            alpha = 0.9
+        else:
+            batch_size = 128
+            dice_epochs = 50
+            alpha = 0.9
 
         for _ in range(dice_epochs):
             for _ in range(len(samples) // batch_size):
