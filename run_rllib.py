@@ -18,6 +18,7 @@ from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
 from src.rllib_extensions.recsim_wrapper import make_recsim_env
+import recsim_expert
 
 
 def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
@@ -246,7 +247,10 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 done = done['__all__']
                 info = info['robot']
             else:
-                action = test_agent.compute_action(obs)
+                if env_name == 'RecSim-v1':
+                    action = recsim_expert.compute_action(env)
+                else:
+                    action = test_agent.compute_action(obs)
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
                 if save_data:
