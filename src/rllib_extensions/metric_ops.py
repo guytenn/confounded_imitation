@@ -9,6 +9,7 @@ from ray.rllib.execution.common import AGENT_STEPS_SAMPLED_COUNTER, \
 from ray.rllib.evaluation.worker_set import WorkerSet
 
 from ray.rllib.execution.metric_ops import OncePerTimeInterval, OncePerTimestepsElapsed
+import numpy as np
 import wandb
 
 
@@ -124,9 +125,10 @@ class CollectMetrics:
         res["custom_metrics"].update(custom_metrics_from_info)
 
         if self.wandb_logger is not None:
-            log_dict = {'min_reward': res['episode_reward_min'],
-                        'max_reward': res['episode_reward_max'],
-                        'mean_reward': res['episode_reward_mean']}
+            log_dict = {'reward_min': res['episode_reward_min'],
+                        'reward_max': res['episode_reward_max'],
+                        'reward_mean': res['episode_reward_mean'],
+                        'reward_std': np.std(res['hist_stats']['episode_reward'])}
 
             self.wandb_logger.log(log_dict,
                                   step=res['timesteps_total'])
