@@ -21,7 +21,7 @@ from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import recsim_expert
 
 
-def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if num_processes is None:
         num_processes = multiprocessing.cpu_count()
     config = dict()
@@ -42,6 +42,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
         # config['normalize_actions'] = False
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
+
+    config['wandb_logger'] = wandb_logger
     if covariate_shift:
         config['env_config'] = \
             {
@@ -106,17 +108,17 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
     return {**config, **extra_configs}
 
 
-def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, coop=False, seed=0, extra_configs={}):
+def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if env_name != "RecSim-v1":
         rllib_env_name = 'assistive_gym:'+env_name
     else:
         rllib_env_name = env_name
     if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
+        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
     elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
+        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
     elif algo == 'slateq':
-        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs), rllib_env_name)
+        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
     if policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -149,14 +151,14 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v1':
         # env = None
         env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, coop, seed, extra_configs)
+    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     if env_name != 'RecSim-v1':
         env.disconnect()
 
@@ -352,6 +354,8 @@ if __name__ == '__main__':
                         help='Number of evaluation episodes (default: 100)')
     parser.add_argument('--colab', action='store_true', default=False,
                         help='Whether rendering should generate an animated png rather than open a window (e.g. when using Google Colab)')
+    parser.add_argument('--wandb', action='store_true', default=False,
+                        help='Log to wandb')
     parser.add_argument('--verbose', action='store_true', default=False,
                         help='Whether to output more verbose prints')
     args = parser.parse_args()
@@ -368,8 +372,14 @@ if __name__ == '__main__':
     if args.num_processes == -1:
         args.num_processes = None
 
+    if args.wandb:
+        wandb_logger = dict(project="Confounded Imitation RL", name="Test RL-LIB", config=args.__dict__)
+    else:
+        wandb_logger = None
+
+
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:

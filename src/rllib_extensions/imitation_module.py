@@ -88,6 +88,9 @@ class ImitationModule:
         samples_batch[SampleBatch.REWARDS] = \
             (1 - self.dice_coef) * samples_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
+        for i, info in enumerate(samples_batch[SampleBatch.INFOS]):
+            info.update({'imitation_reward': reward_bonus[i]})
+
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples
 

@@ -19,7 +19,6 @@ from ray.rllib.evaluation.worker_set import WorkerSet
 from ray.rllib.execution.rollout_ops import ParallelRollouts, ConcatBatches, \
     StandardizeFields, SelectExperiences
 from ray.rllib.execution.train_ops import TrainOneStep, TrainTFMultiGPU
-from ray.rllib.execution.metric_ops import StandardMetricsReporting
 from ray.rllib.policy.policy import LEARNER_STATS_KEY, Policy
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.utils.deprecation import DEPRECATED_VALUE
@@ -27,6 +26,7 @@ from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
 from src.rllib_extensions.imitation_module import ImitationModule
+from src.rllib_extensions.metric_ops import StandardMetricsReporting
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,8 @@ DEFAULT_CONFIG = with_common_config({
     # to tune vf_loss_coeff.
     # Use config.model.vf_share_layers instead.
     "vf_share_layers": DEPRECATED_VALUE,
-    "dice_config": None
+    "dice_config": None,
+    "wandb_logger": None
 })
 
 # __sphinx_doc_end__

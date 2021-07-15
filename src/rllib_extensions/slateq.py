@@ -131,7 +131,8 @@ DEFAULT_CONFIG = with_common_config({
     "slateq_strategy": "QL",
     # user/doc embedding size for the recsim environment
     "recsim_embedding_size": 20,
-    "dice_config": None
+    "dice_config": None,
+    "wandb_logger": None
 })
 # __sphinx_doc_end__
 # yapf: enable
