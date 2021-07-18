@@ -108,7 +108,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
     return {**config, **extra_configs}
 
 
-def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if env_name != "RecSim-v1":
         rllib_env_name = 'confounded_imitation:'+env_name
     else:
@@ -119,7 +119,7 @@ def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=F
         agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
     elif algo == 'slateq':
         agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
-    if policy_path != '':
+    if load_policy and policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
         else:
@@ -151,14 +151,14 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v1':
         # env = None
         env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-    agent, checkpoint_path = load_policy(env, algo, env_name, load_policy_path, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     if env_name != 'RecSim-v1':
         env.disconnect()
 
@@ -188,7 +188,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_policy(env, algo, env_name, policy_path, 0, False, 1, coop, seed, extra_configs)
+    test_agent, _ = load_agent(env, algo, env_name, policy_path, True, 0, False, 1, coop, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -223,7 +223,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
-    test_agent, _ = load_policy(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, coop=coop, seed=seed, extra_configs=extra_configs)
+    test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
@@ -352,6 +352,8 @@ if __name__ == '__main__':
                         help='Directory to save trained policy in (default ./trained_models/)')
     parser.add_argument('--load-policy-path', default='./trained_models/',
                         help='Path name to saved policy checkpoint (NOTE: Use this to continue training an existing policy, or to evaluate a trained policy)')
+    parser.add_argument('--load-model', action='store_true', default=False,
+                        help='Whether to load checkpoint from load-policy-path')
     parser.add_argument('--render-episodes', type=int, default=1,
                         help='Number of rendering episodes (default: 1)')
     parser.add_argument('--eval-episodes', type=int, default=100,
@@ -383,7 +385,7 @@ if __name__ == '__main__':
 
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_policy, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
