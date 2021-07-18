@@ -320,6 +320,8 @@ if __name__ == '__main__':
                         help='Environment to train on (default: ScratchItchJaco-v0)')
     parser.add_argument('--algo', default='ppo', choices=['ppo', 'sac', 'slateq'],
                         help='Reinforcement learning algorithm')
+    parser.add_argument('--project_name', default='Confounded Imitation RL',
+                        help='run name for wandb logging')
     parser.add_argument('--run_name', default='',
                         help='run name for wandb logging')
     parser.add_argument('--seed', type=int, default=-1,
@@ -375,7 +377,7 @@ if __name__ == '__main__':
         args.num_processes = None
 
     if args.wandb:
-        wandb_logger = dict(project="Confounded Imitation RL", name=args.run_name, config=args.__dict__)
+        wandb_logger = dict(project=args.project_name, name=args.run_name, config=args.__dict__)
     else:
         wandb_logger = None
 
