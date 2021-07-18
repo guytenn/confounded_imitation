@@ -88,7 +88,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
             "env_name": env_name,
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": [],# env.unwrapped.context_features if no_context else [],
+            "features_to_remove": env.unwrapped.context_features if no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": 100,
             "dice_coef": dice_coef,
@@ -110,7 +110,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
 
 def load_policy(env, algo, env_name, policy_path=None, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if env_name != "RecSim-v1":
-        rllib_env_name = 'assistive_gym:'+env_name
+        rllib_env_name = 'confounded_imitation:'+env_name
     else:
         rllib_env_name = env_name
     if algo == 'ppo':

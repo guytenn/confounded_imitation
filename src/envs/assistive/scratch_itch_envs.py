@@ -41,32 +41,32 @@ class ScratchItchPandaEnv(ScratchItchEnv):
 class ScratchItchPR2HumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchPR2HumanEnv, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchPR2Human-v1', lambda config: ScratchItchPR2HumanEnv())
+register_env('confounded_imitation:ScratchItchPR2Human-v1', lambda config: ScratchItchPR2HumanEnv())
 
 class ScratchItchBaxterHumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchBaxterHumanEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchBaxterHuman-v1', lambda config: ScratchItchBaxterHumanEnv())
+register_env('confounded_imitation:ScratchItchBaxterHuman-v1', lambda config: ScratchItchBaxterHumanEnv())
 
 class ScratchItchSawyerHumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchSawyerHumanEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchSawyerHuman-v1', lambda config: ScratchItchSawyerHumanEnv())
+register_env('confounded_imitation:ScratchItchSawyerHuman-v1', lambda config: ScratchItchSawyerHumanEnv())
 
 class ScratchItchJacoHumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchJacoHumanEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchJacoHuman-v1', lambda config: ScratchItchJacoHumanEnv())
+register_env('confounded_imitation:ScratchItchJacoHuman-v1', lambda config: ScratchItchJacoHumanEnv())
 
 class ScratchItchStretchHumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchStretchHumanEnv, self).__init__(robot=Stretch('wheel_'+robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchStretchHuman-v1', lambda config: ScratchItchStretchHumanEnv())
+register_env('confounded_imitation:ScratchItchStretchHuman-v1', lambda config: ScratchItchStretchHumanEnv())
 
 class ScratchItchPandaHumanEnv(ScratchItchEnv, MultiAgentEnv):
     def __init__(self):
         super(ScratchItchPandaHumanEnv, self).__init__(robot=Panda(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ScratchItchPandaHuman-v1', lambda config: ScratchItchPandaHumanEnv())
+register_env('confounded_imitation:ScratchItchPandaHuman-v1', lambda config: ScratchItchPandaHumanEnv())
 
 class ScratchItchPR2MeshEnv(ScratchItchMeshEnv):
     def __init__(self):

@@ -14,26 +14,28 @@ c2rgb = [[0, 0, 255],
 
 # APPLE_CELLS = [(9, 10), (9, 8), (12, 10), (1, 7), (5, 4), (5, 14), (1, 13), (7, 2), (4, 2), (14, 1), (5, 1), (3, 4), (9, 3), (9, 14), (9, 2), (2, 13), (6, 4), (10, 4), (4, 10), (7, 5)]
 MINE_CELLS = [(4, 6), (2, 12), (8, 10), (4, 1), (14, 6), (4, 8), (4, 7), (10, 12), (5, 13), (5, 8), (7, 10), (9, 9), (2, 7), (11, 14), (4, 13), (5, 11), (13, 3), (8, 1), (4, 12), (10, 2)]
-START_CELL = [(4, 1)]
-APPLE_CELLS = [(1, 7), (7, 7)]
-GOAL_CELLS = [(1, 7), (7, 7)]
+START_CELL = [(7, 1)]
+APPLE_CELLS = [(1, 13), (13, 13)]
+GOAL_CELLS = [(1, 13), (13, 13)]
 
 
 class RoomsEnv(core.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, rows=9, cols=9, empty=True, random_walls=False,
+    def __init__(self, rows=15, cols=15, empty=True, random_walls=False,
                  obstacles: Iterable[Union[Tuple, List]] = None, spatial=False,
-                 n_apples=1, n_mines=0,
+                 n_apples=1, n_mines=5,
                  action_repeats=1, max_steps=None, seed=None, fixed_reset=True,
                  mask_size=0, px=(0.2, 0.8),
-                 wind_in_state=False, random_wind=False, vert_wind=(0, 0), horz_wind=(0, 0)):
+                 wind_in_state=False, random_wind=False, vert_wind=(0.2, 0.2), horz_wind=(0.2, 0.2)):
         '''
         vert_wind = (up, down)
         horz_wind = (right, left)
         '''
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
+
+        self.context_features = [2, 3, 4, 5]
 
         self.rows, self.cols = rows, cols
         if max_steps is None:
@@ -82,9 +84,9 @@ class RoomsEnv(core.Env):
         self.fixed_reset = fixed_reset
         self.taken_positions = np.copy(self.map)
         self.state_cell, self.state = self._random_from_map(1, START_CELL, force_random=False)
-        # self.apples_cells, self.apples_map = self._random_from_map(n_apples, APPLE_CELLS)
-        # self.mines_cells, self.mines_map = self._random_from_map(n_mines, MINE_CELLS, force_random=True, px=px)
         self.apples_cells, self.apples_map, self.mines_cells, self.mines_map = None, None, None, None
+        # self.apples_cells, self.apples_map = self._random_from_map(n_apples, APPLE_CELLS)
+        self.mines_cells, self.mines_map = self._random_from_map(n_mines, MINE_CELLS, force_random=False)
         self.x = None
         self._random_goal()
 
@@ -120,6 +122,7 @@ class RoomsEnv(core.Env):
         # self.apples_cells, self.apples_map = self._random_from_map(self.n_apples, APPLE_CELLS)
         # self.mines_cells, self.mines_map = self._random_from_map(self.n_mines, MINE_CELLS, force_random=True, px=self.px)
         self.apples_cells, self.apples_map, self.mines_cells, self.mines_map = None, None, None, None
+        self.mines_cells, self.mines_map = self._random_from_map(self.n_mines, MINE_CELLS, force_random=False)
         self._random_goal()
 
         self.nsteps = 0
@@ -150,15 +153,17 @@ class RoomsEnv(core.Env):
             apple_collected_location = self.apples_map * self.state
             mine_collected_location = self.mines_map * self.state
             # if self.n_resets > 1000:
-            r = np.sum(apple_collected_location) - 1 * np.sum(mine_collected_location)
+            r = 1 * np.sum(apple_collected_location) - 1 * np.sum(mine_collected_location)
+            # r -= 0.1 * np.linalg.norm(np.array(self.state_cell) - np.array(self.apples_cells)) / np.sqrt(self.rows * self.cols)
             # else:
             #     r = np.sum(apple_collected_location)
-            self.apples_map -= apple_collected_location
-            self.mines_map -= mine_collected_location
+            # self.apples_map -= apple_collected_location
+            # self.mines_map -= mine_collected_location
             # if np.sum(mine_collected_location) > 0:
             #     self.state_cell, self.state = self._random_from_map(1, START_CELL)
 
-            done = np.sum(self.apples_map) == 0 or np.sum(self.mines_map) == 0 or self.nsteps >= self.max_steps
+            # done = np.sum(self.apples_map) == 0 or np.sum(self.mines_map) == 0 or self.nsteps >= self.max_steps
+            done = self.nsteps >= self.max_steps
 
             obs = self._obs_from_state(self.spatial)
 
@@ -384,6 +389,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     env = RoomsEnv()
     obs = env.reset()
+    env.step(env.action_space.sample())
     print(env.state_cell)
     print(env.apples_cells)
     print(env.mines_cells)

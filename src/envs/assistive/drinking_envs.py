@@ -26,7 +26,7 @@ class DrinkingSawyerEnv(DrinkingEnv):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
         super(DrinkingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('assistive_gym:DrinkingSawyer-v1', lambda config: DrinkingSawyerEnv(context_params=config['context_params'], seed=-1))
+register_env('confounded_imitation:DrinkingSawyer-v1', lambda config: DrinkingSawyerEnv(context_params=config['context_params'], seed=-1))
 
 class DrinkingJacoEnv(DrinkingEnv):
     def __init__(self):
@@ -43,30 +43,30 @@ class DrinkingPandaEnv(DrinkingEnv):
 class DrinkingPR2HumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingPR2HumanEnv, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingPR2Human-v1', lambda config: DrinkingPR2HumanEnv())
+register_env('confounded_imitation:DrinkingPR2Human-v1', lambda config: DrinkingPR2HumanEnv())
 
 class DrinkingBaxterHumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingBaxterHumanEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingBaxterHuman-v1', lambda config: DrinkingBaxterHumanEnv())
+register_env('confounded_imitation:DrinkingBaxterHuman-v1', lambda config: DrinkingBaxterHumanEnv())
 
 class DrinkingSawyerHumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingSawyerHumanEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingSawyerHuman-v1', lambda config: DrinkingSawyerHumanEnv())
+register_env('confounded_imitation:DrinkingSawyerHuman-v1', lambda config: DrinkingSawyerHumanEnv())
 
 class DrinkingJacoHumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingJacoHumanEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingJacoHuman-v1', lambda config: DrinkingJacoHumanEnv())
+register_env('confounded_imitation:DrinkingJacoHuman-v1', lambda config: DrinkingJacoHumanEnv())
 
 class DrinkingStretchHumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingStretchHumanEnv, self).__init__(robot=Stretch('wheel_'+robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingStretchHuman-v1', lambda config: DrinkingStretchHumanEnv())
+register_env('confounded_imitation:DrinkingStretchHuman-v1', lambda config: DrinkingStretchHumanEnv())
 
 class DrinkingPandaHumanEnv(DrinkingEnv, MultiAgentEnv):
     def __init__(self):
         super(DrinkingPandaHumanEnv, self).__init__(robot=Panda(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DrinkingPandaHuman-v1', lambda config: DrinkingPandaHumanEnv())
+register_env('confounded_imitation:DrinkingPandaHuman-v1', lambda config: DrinkingPandaHumanEnv())
 

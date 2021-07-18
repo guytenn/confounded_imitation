@@ -9,7 +9,7 @@ register(
     max_episode_steps=100000,
     kwargs={}
 )
-register_env('assistive_gym:rooms-v0', lambda config: RoomsEnv(seed=-1))
+register_env('confounded_imitation:rooms-v0', lambda config: RoomsEnv(seed=-1))
 
 register(
     id='SparseHopper-v0',

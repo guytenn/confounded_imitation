@@ -13,6 +13,8 @@ import numpy as np
 import GPUtil
 
 from src.rllib_extensions.recsim_wrapper import restore_samples
+import gym.spaces as spaces
+from src.common.utils import to_onehot
 
 
 class ImitationModule:
@@ -46,10 +48,15 @@ class ImitationModule:
         self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'),
                                         data['dones'], device=self.device)
 
-        if self.is_recsim:
-            input_shape = len(self.features_to_keep) + self.state_dim * self.action_space.shape[0] + 1
+        if isinstance(self.action_space, spaces.Discrete):
+            action_shape = self.action_space.n
         else:
-            input_shape = len(self.features_to_keep) + self.action_space.shape[0] + 1
+            action_shape = self.action_space.shape[0]
+
+        if self.is_recsim:
+            input_shape = len(self.features_to_keep) + self.state_dim * action_shape + 1
+        else:
+            input_shape = len(self.features_to_keep) + action_shape+ 1
         self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
         opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
@@ -96,6 +103,8 @@ class ImitationModule:
 
 
     def _forward_model(self, obs, actions, next_obs, dones):
+        if isinstance(self.action_space, spaces.Discrete):
+            actions = to_onehot(actions.flatten(), self.action_space.n).clone()
         rs = self.g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1)).flatten()
         if self.airl:
             vs = self.h(obs).flatten()

@@ -39,30 +39,30 @@ class ArmManipulationPandaEnv(ArmManipulationEnv):
 class ArmManipulationPR2HumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationPR2HumanEnv, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationPR2Human-v1', lambda config: ArmManipulationPR2HumanEnv())
+register_env('confounded_imitation:ArmManipulationPR2Human-v1', lambda config: ArmManipulationPR2HumanEnv())
 
 class ArmManipulationBaxterHumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationBaxterHumanEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationBaxterHuman-v1', lambda config: ArmManipulationBaxterHumanEnv())
+register_env('confounded_imitation:ArmManipulationBaxterHuman-v1', lambda config: ArmManipulationBaxterHumanEnv())
 
 class ArmManipulationSawyerHumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationSawyerHumanEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationSawyerHuman-v1', lambda config: ArmManipulationSawyerHumanEnv())
+register_env('confounded_imitation:ArmManipulationSawyerHuman-v1', lambda config: ArmManipulationSawyerHumanEnv())
 
 class ArmManipulationJacoHumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationJacoHumanEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationJacoHuman-v1', lambda config: ArmManipulationJacoHumanEnv())
+register_env('confounded_imitation:ArmManipulationJacoHuman-v1', lambda config: ArmManipulationJacoHumanEnv())
 
 class ArmManipulationStretchHumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationStretchHumanEnv, self).__init__(robot=Stretch('wheel_'+robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationStretchHuman-v1', lambda config: ArmManipulationStretchHumanEnv())
+register_env('confounded_imitation:ArmManipulationStretchHuman-v1', lambda config: ArmManipulationStretchHumanEnv())
 
 class ArmManipulationPandaHumanEnv(ArmManipulationEnv, MultiAgentEnv):
     def __init__(self):
         super(ArmManipulationPandaHumanEnv, self).__init__(robot=Panda(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:ArmManipulationPandaHuman-v1', lambda config: ArmManipulationPandaHumanEnv())
+register_env('confounded_imitation:ArmManipulationPandaHuman-v1', lambda config: ArmManipulationPandaHumanEnv())
 

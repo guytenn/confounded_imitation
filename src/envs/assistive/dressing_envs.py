@@ -26,7 +26,7 @@ class DressingSawyerEnv(DressingEnv):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
         super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('assistive_gym:DressingSawyer-v1', lambda config: DressingSawyerEnv(context_params=config['context_params'], seed=-1))
+register_env('confounded_imitation:DressingSawyer-v1', lambda config: DressingSawyerEnv(context_params=config['context_params'], seed=-1))
 
 class DressingJacoEnv(DressingEnv):
     def __init__(self):
@@ -43,30 +43,30 @@ class DressingPandaEnv(DressingEnv):
 class DressingPR2HumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingPR2HumanEnv, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingPR2Human-v1', lambda config: DressingPR2HumanEnv())
+register_env('confounded_imitation:DressingPR2Human-v1', lambda config: DressingPR2HumanEnv())
 
 class DressingBaxterHumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingBaxterHumanEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingBaxterHuman-v1', lambda config: DressingBaxterHumanEnv())
+register_env('confounded_imitation:DressingBaxterHuman-v1', lambda config: DressingBaxterHumanEnv())
 
 class DressingSawyerHumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingSawyerHumanEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingSawyerHuman-v1', lambda config: DressingSawyerHumanEnv())
+register_env('confounded_imitation:DressingSawyerHuman-v1', lambda config: DressingSawyerHumanEnv())
 
 class DressingJacoHumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingJacoHumanEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingJacoHuman-v1', lambda config: DressingJacoHumanEnv())
+register_env('confounded_imitation:DressingJacoHuman-v1', lambda config: DressingJacoHumanEnv())
 
 class DressingStretchHumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingStretchHumanEnv, self).__init__(robot=Stretch('wheel_'+robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingStretchHuman-v1', lambda config: DressingStretchHumanEnv())
+register_env('confounded_imitation:DressingStretchHuman-v1', lambda config: DressingStretchHumanEnv())
 
 class DressingPandaHumanEnv(DressingEnv, MultiAgentEnv):
     def __init__(self):
         super(DressingPandaHumanEnv, self).__init__(robot=Panda(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:DressingPandaHuman-v1', lambda config: DressingPandaHumanEnv())
+register_env('confounded_imitation:DressingPandaHuman-v1', lambda config: DressingPandaHumanEnv())
 

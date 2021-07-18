@@ -39,30 +39,30 @@ class BedBathingPandaEnv(BedBathingEnv):
 class BedBathingPR2HumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingPR2HumanEnv, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingPR2Human-v1', lambda config: BedBathingPR2HumanEnv())
+register_env('confounded_imitation:BedBathingPR2Human-v1', lambda config: BedBathingPR2HumanEnv())
 
 class BedBathingBaxterHumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingBaxterHumanEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingBaxterHuman-v1', lambda config: BedBathingBaxterHumanEnv())
+register_env('confounded_imitation:BedBathingBaxterHuman-v1', lambda config: BedBathingBaxterHumanEnv())
 
 class BedBathingSawyerHumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingSawyerHumanEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingSawyerHuman-v1', lambda config: BedBathingSawyerHumanEnv())
+register_env('confounded_imitation:BedBathingSawyerHuman-v1', lambda config: BedBathingSawyerHumanEnv())
 
 class BedBathingJacoHumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingJacoHumanEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingJacoHuman-v1', lambda config: BedBathingJacoHumanEnv())
+register_env('confounded_imitation:BedBathingJacoHuman-v1', lambda config: BedBathingJacoHumanEnv())
 
 class BedBathingStretchHumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingStretchHumanEnv, self).__init__(robot=Stretch('wheel_'+robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingStretchHuman-v1', lambda config: BedBathingStretchHumanEnv())
+register_env('confounded_imitation:BedBathingStretchHuman-v1', lambda config: BedBathingStretchHumanEnv())
 
 class BedBathingPandaHumanEnv(BedBathingEnv, MultiAgentEnv):
     def __init__(self):
         super(BedBathingPandaHumanEnv, self).__init__(robot=Panda(robot_arm), human=Human(human_controllable_joint_indices, controllable=True))
-register_env('assistive_gym:BedBathingPandaHuman-v1', lambda config: BedBathingPandaHumanEnv())
+register_env('confounded_imitation:BedBathingPandaHuman-v1', lambda config: BedBathingPandaHumanEnv())
 
