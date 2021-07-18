@@ -49,7 +49,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
             {
                 'context_params': \
                     {
-                        "gender": [0.2, 0.8],
+                        "gender": [0.8, 0.2],
                         "mass_delta": 10,
                         "mass_std": 20,
                         "radius_delta": -0.1,

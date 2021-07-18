@@ -98,8 +98,13 @@ class FeedingEnv(AssistiveEnv):
         head_pos, head_orient = self.human.get_pos_orient(self.human.head)
         head_pos_real, head_orient_real = self.robot.convert_to_realworld(head_pos, head_orient)
         target_pos_real, _ = self.robot.convert_to_realworld(self.target_pos)
+
         self.robot_force_on_human, self.spoon_force_on_human = self.get_total_force()
         self.total_force_on_human = self.robot_force_on_human + self.spoon_force_on_human
+
+        # To make the problem a bit harder to solve, delete this to make it easier
+        target_pos_real = 0
+
         robot_obs = np.concatenate([spoon_pos_real, spoon_orient_real, spoon_pos_real - target_pos_real, robot_joint_angles, head_pos_real, head_orient_real, [self.spoon_force_on_human]])
         robot_obs_with_context = np.concatenate((robot_obs, self.context_vector)).ravel()
         if agent == 'robot':

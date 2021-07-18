@@ -318,7 +318,8 @@ class AssistiveEnv(gym.Env):
         else:
             reward_arm_manipulation_tool_pressures = 0.0
 
-        return self.C_v*reward_velocity + self.C_f*reward_force_nontarget + self.C_hf*reward_high_target_forces + self.C_fd*reward_food_hit_human + self.C_fdv*reward_food_velocities + self.C_d*reward_dressing_force + self.C_p*reward_arm_manipulation_tool_pressures
+        preference_score = self.C_v*reward_velocity + self.C_f*reward_force_nontarget + self.C_hf*reward_high_target_forces + self.C_fd*reward_food_hit_human + self.C_fdv*reward_food_velocities + self.C_d*reward_dressing_force + self.C_p*reward_arm_manipulation_tool_pressures
+        return self.config('preference_scale', 'human_preferences') * preference_score
 
     def init_robot_pose(self, target_ee_pos, target_ee_orient, start_pos_orient, target_pos_orients, arm='right', tools=[], collision_objects=[], wheelchair_enabled=True, right_side=True, max_iterations=3):
         base_position = None
@@ -481,7 +482,7 @@ class AssistiveEnv(gym.Env):
     def get_default_context_params(self):
         context_params = \
         {
-            "gender": [0.5, 0.5],
+            "gender": [0.3, 0.7],
             "mass_delta": 0,
             "mass_std": 10,
             "radius_delta": 0,
@@ -495,7 +496,7 @@ class AssistiveEnv(gym.Env):
             "food_velocities_deltas": [0, 0],
             "dressing_force_deltas": [0, 0],
             "high_pressures_deltas": [0, 0],
-            "impairment": [0.25, 0.25, 0.25, 0.25]
+            "impairment": [0.1, 0.4, 0.3, 0.2]
         }
 
         return context_params
