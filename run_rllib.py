@@ -350,7 +350,7 @@ if __name__ == '__main__':
                         help='Dice coefficient, between 0 and 1')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
-    parser.add_argument('--load-policy-path', default='./trained_models/',
+    parser.add_argument('--load_policy_path', default='./trained_models/',
                         help='Path name to saved policy checkpoint (NOTE: Use this to continue training an existing policy, or to evaluate a trained policy)')
     parser.add_argument('--load-model', action='store_true', default=False,
                         help='Whether to load checkpoint from load-policy-path')
