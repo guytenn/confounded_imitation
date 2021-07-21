@@ -80,8 +80,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 0.4,
-                    'beta': 0.6
+                    'alpha': 0.5,
+                    'beta': 0.5
                 }
         else:
             config['env_config'] = {'context_params': None}
