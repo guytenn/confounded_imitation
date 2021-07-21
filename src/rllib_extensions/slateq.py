@@ -209,7 +209,7 @@ def execution_plan(workers: WorkerSet,
         train_op = Concurrently(
             ops,
             mode="round_robin",
-            output_indexes=[len(ops)],
+            output_indexes=[len(ops)-1],
             round_robin_weights=[1]*len(ops))
     else:
         # No training is needed for the RANDOM strategy.
