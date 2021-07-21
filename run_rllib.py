@@ -3,7 +3,7 @@ from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
-from ray.rllib.agents import ppo, sac
+from ray.rllib.agents import ppo, sac, slateq, dqn
 from src.rllib_extensions import slateq
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
@@ -45,8 +45,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         # config['normalize_actions'] = False
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
-        config["hiddens"] = [100, 100]
-        config["train_batch_size"] = 128
+        # config["hiddens"] = [100, 100]
+        # config["train_batch_size"] = 128
 
     config['wandb_logger'] = wandb_logger
     if covariate_shift:
