@@ -3,7 +3,7 @@ from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
-from ray.rllib.agents import ppo, sac, slateq, dqn
+from ray.rllib.agents import ppo, sac
 from src.rllib_extensions import slateq
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
@@ -21,6 +21,7 @@ from src.rllib_extensions.dice import DICE
 import recsim_expert
 
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
+
 
 def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     env_name = 'RecSim-v2' if env.spec is None else env.spec.id
@@ -47,14 +48,15 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         config = slateq.DEFAULT_CONFIG.copy()
         # config["hiddens"] = [100, 100]
         # config["train_batch_size"] = 128
+        config["slateq_strategy"] = 'RANDOM'
 
     config['wandb_logger'] = wandb_logger
     if covariate_shift:
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 0.6,
-                    'beta': 0.4
+                    'alpha': 1.1,
+                    'beta': 1
                 }
         else:
             config['env_config'] = \
@@ -82,8 +84,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 0.5,
-                    'beta': 0.5
+                    'alpha': 1,
+                    'beta': 1.1
                 }
         else:
             config['env_config'] = {'context_params': None}

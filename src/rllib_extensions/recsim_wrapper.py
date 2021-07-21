@@ -135,8 +135,8 @@ def make_recsim_env(config):
         "resample_documents": True,
         "seed": 0,
         "convert_to_discrete_action_space": False,
-        "alpha": 0.5,
-        "beta": 0.5
+        "alpha": 1,
+        "beta": 1.1
     }
     env_config = DEFAULT_ENV_CONFIG.copy()
     env_config.update(config)
