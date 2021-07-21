@@ -46,9 +46,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         # config['normalize_actions'] = False
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
-        # config["hiddens"] = [100, 100]
-        # config["train_batch_size"] = 128
-        config["slateq_strategy"] = 'SARSA'
+        config["hiddens"] = [100, 100]
+        config["train_batch_size"] = 128
 
     config['wandb_logger'] = wandb_logger
     if covariate_shift:
