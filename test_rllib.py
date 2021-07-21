@@ -14,7 +14,7 @@ tune.run(
         "framework": "torch",
         "num_workers": 1,
         "num_gpus": 0,
-        "env": "RecSim-v1",
+        "env": "RecSim-v2",
         "slateq_strategy": "MYOP",
         "logger_config" : {
             "wandb": {

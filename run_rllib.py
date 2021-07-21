@@ -1,4 +1,5 @@
 import os, sys, multiprocessing, gym, ray, shutil, argparse, importlib, glob
+from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
@@ -17,11 +18,13 @@ import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
-from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import recsim_expert
 
+trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
-def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+    env_name = 'RecSim-v2' if env.spec is None else env.spec.id
+
     if num_processes is None:
         num_processes = multiprocessing.cpu_count()
     config = dict()
@@ -45,50 +48,67 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
 
     config['wandb_logger'] = wandb_logger
     if covariate_shift:
-        config['env_config'] = \
-            {
-                'context_params': \
-                    {
-                        "gender": [0.8, 0.2],
-                        "mass_delta": 10,
-                        "mass_std": 20,
-                        "radius_delta": -0.1,
-                        "radius_std": 0.2,
-                        "height_delta": 0.1,
-                        "height_std": 0.2,
-                        "velocity_deltas": [0.1, 0.2],
-                        "force_nontarget_deltas": [0.002, 0.005],
-                        "high_forces_deltas": [0.001, 0.03],
-                        "food_hit_deltas": [-0.5, 1.],
-                        "food_velocities_deltas": [-0.5, 1.],
-                        "dressing_force_deltas": [0, 0.1],
-                        "high_pressures_deltas": [0, 0.1],
-                        "impairment": [0.1, 0.1, 0.1, 0.7]
-                    }
-            }
+        if env_name == 'RecSim-v2':
+            config['env_config'] = \
+                {
+                    'alpha': 0.6,
+                    'beta': 0.4
+                }
+        else:
+            config['env_config'] = \
+                {
+                    'context_params': \
+                        {
+                            "gender": [0.8, 0.2],
+                            "mass_delta": 10,
+                            "mass_std": 20,
+                            "radius_delta": -0.1,
+                            "radius_std": 0.2,
+                            "height_delta": 0.1,
+                            "height_std": 0.2,
+                            "velocity_deltas": [0.1, 0.2],
+                            "force_nontarget_deltas": [0.002, 0.005],
+                            "high_forces_deltas": [0.001, 0.03],
+                            "food_hit_deltas": [-0.5, 1.],
+                            "food_velocities_deltas": [-0.5, 1.],
+                            "dressing_force_deltas": [0, 0.1],
+                            "high_pressures_deltas": [0, 0.1],
+                            "impairment": [0.1, 0.1, 0.1, 0.7]
+                        }
+                }
     else:
-        config['env_config'] = {'context_params': None}
+        if env_name == 'RecSim-v2':
+            config['env_config'] = \
+                {
+                    'alpha': 0.4,
+                    'beta': 0.6
+                }
+        else:
+            config['env_config'] = {'context_params': None}
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
     config['seed'] = seed
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
     if dice_coef > 0:
-        env_name = 'RecSim-v1' if env.spec is None else env.spec.id
         expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env_name, 'data_1.h5')
 
-        if env_name == 'RecSim-v1':
+        if env_name == 'RecSim-v2':
             state_dim = config["recsim_embedding_size"]
             airl = False
+            context_features = range(env.unwrapped.environment.user_model._user_sampler.get_user_ctor().NUM_FEATURES)
         else:
             state_dim = env.observation_space.shape[0]
             airl = True
+            context_features = env.unwrapped.context_features
+        if n_confounders == -1:
+            n_confounders = len(context_features)
 
         config["dice_config"] = {
             "env_name": env_name,
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": env.unwrapped.context_features if no_context else [],
+            "features_to_remove": context_features[:n_confounders] if no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": 100,
             "dice_coef": dice_coef,
@@ -108,17 +128,15 @@ def setup_config(env, algo, dice_coef=0, no_context=False, covariate_shift=False
     return {**config, **extra_configs}
 
 
-def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
-    if env_name != "RecSim-v1":
+def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+    if env_name != "RecSim-v2":
         rllib_env_name = 'confounded_imitation:'+env_name
     else:
         rllib_env_name = env_name
-    if algo == 'ppo':
-        agent = PPOTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
-    elif algo == 'sac':
-        agent = sac.SACTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
-    elif algo == 'slateq':
-        agent = slateq.SlateQTrainer(setup_config(env, algo, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs), rllib_env_name)
+
+    config = setup_config(env, algo, dice_coef, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    agent = trainer_selector[algo](config, rllib_env_name)
+
     if load_policy and policy_path != '':
         if 'checkpoint' in policy_path:
             agent.restore(policy_path)
@@ -139,7 +157,7 @@ def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef
 
 def make_env(env_name, coop=False, seed=1001):
     if not coop:
-        if env_name == 'RecSim-v1':
+        if env_name == 'RecSim-v2':
             env = make_recsim_env({})
         else:
             env = gym.make(env_name)
@@ -151,15 +169,15 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, coop=False, load=False, no_context=False, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-    if env_name == 'RecSim-v1':
+    if env_name == 'RecSim-v2':
         # env = None
         env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, no_context, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
-    if env_name != 'RecSim-v1':
+    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    if env_name != 'RecSim-v2':
         env.disconnect()
 
     timesteps = 0
@@ -182,13 +200,13 @@ def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/',
     return checkpoint_path
 
 
-def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, seed=0, n_episodes=1, extra_configs={}):
+def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, seed=0, no_context=False, covariate_shift=False, n_episodes=1, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env is None:
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_agent(env, algo, env_name, policy_path, True, 0, False, 1, coop, seed, extra_configs)
+    test_agent, _ = load_agent(env, algo, env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -249,14 +267,14 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 done = done['__all__']
                 info = info['robot']
             else:
-                if env_name == 'RecSim-v1':
+                if env_name == 'RecSim-v2':
                     action = recsim_expert.compute_action(env)
                 else:
                     action = test_agent.compute_action(obs)
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
                 if save_data:
-                    if env_name == 'RecSim-v1':
+                    if env_name == 'RecSim-v2':
                         episode_data['states'].append(prev_obs['user'])
                         episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
                     else:
@@ -330,6 +348,8 @@ if __name__ == '__main__':
                         help='Whether to train a new policy')
     parser.add_argument('--no_context', action='store_true', default=False,
                         help='Remove context for imitation')
+    parser.add_argument('--n_confounders', type=int, default=-1,
+                        help='Number of confounders when no context is on (default: -1)')
     parser.add_argument('--covariate_shift', action='store_true', default=False,
                         help='Add covariate shift to environment')
     parser.add_argument('--num-processes', type=int, default=-1,
@@ -385,9 +405,9 @@ if __name__ == '__main__':
 
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
     if args.render:
-        render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, n_episodes=args.render_episodes)
+        render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
         evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, covariate_shift=args.covariate_shift)
 

@@ -19,7 +19,7 @@ from src.common.utils import to_onehot
 
 class ImitationModule:
     def __init__(self, dice_config):
-        self.is_recsim = dice_config['env_name'] == 'RecSim-v1'
+        self.is_recsim = dice_config['env_name'] == 'RecSim-v2'
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
         self.features_to_remove = dice_config['features_to_remove']

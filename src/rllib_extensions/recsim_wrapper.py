@@ -8,7 +8,7 @@ from collections import OrderedDict
 import gym
 from gym import spaces
 import numpy as np
-from recsim.environments import interest_evolution
+from src.envs.recsim_extension import interest_evolution
 from typing import List
 
 from ray.rllib.utils.error import UnsupportedSpaceException
@@ -127,6 +127,7 @@ def restore_samples(obs_samples, action_samples, observation_space):
 
     return obs['user'], selected_doc
 
+
 def make_recsim_env(config):
     DEFAULT_ENV_CONFIG = {
         "num_candidates": 10,
@@ -134,9 +135,13 @@ def make_recsim_env(config):
         "resample_documents": True,
         "seed": 0,
         "convert_to_discrete_action_space": False,
+        "alpha": 0.4,
+        "beta": 0.6
     }
     env_config = DEFAULT_ENV_CONFIG.copy()
     env_config.update(config)
+    if env_config["seed"] == -1:
+        env_config["seed"] = np.random.randint(2 ** 30 - 1)
     env = interest_evolution.create_environment(env_config)
     env = RecSimResetWrapper(env)
     env = RecSimObservationSpaceWrapper(env)
@@ -145,5 +150,7 @@ def make_recsim_env(config):
     return env
 
 
-env_name = "RecSim-v1"
-register_env(name=env_name, env_creator=make_recsim_env)
+env_name = "RecSim-v2"
+register_env(name=env_name, env_creator=lambda config: make_recsim_env({"alpha": config['alpha'],
+                                                                        "beta": config['beta'],
+                                                                        "seed": -1}))
