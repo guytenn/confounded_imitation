@@ -46,7 +46,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
         config["hiddens"] = [100, 100]
-        config["train_batch_size"] = 128
+        config["train_batch_size"] = 256
 
     config['wandb_logger'] = wandb_logger
     if covariate_shift:
