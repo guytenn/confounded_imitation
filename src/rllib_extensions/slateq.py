@@ -189,10 +189,15 @@ def execution_plan(workers: WorkerSet,
     # returned from the LocalReplay() iterator is passed to TrainOneStep to
     # take a SGD step.
     replay_buffer = Replay(local_buffer=local_replay_buffer)
-    replay_op = replay_buffer.for_each(TrainOneStep(workers))
 
     if config["dice_config"] is not None:
         imitation_op = replay_buffer.for_each(ImitationModule(config['dice_config']))
+    else:
+        imitation_op = None
+
+    replay_op = replay_buffer.for_each(TrainOneStep(workers))
+
+    if config["dice_config"] is not None:
         ops = [store_op, imitation_op, replay_op]
     else:
         ops = [store_op, replay_op]
