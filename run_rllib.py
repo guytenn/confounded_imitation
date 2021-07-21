@@ -91,12 +91,14 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
     if dice_coef > 0:
-        expert_data_path = os.path.join(os.path.expanduser('~/.datasets'), env_name, 'data_1.h5')
+        load_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+        suffix = get_largest_suffix(load_dir, 'data_')
+        expert_data_path = os.path.join(load_dir, f'data_{suffix}.h5')
 
         if env_name == 'RecSim-v2':
             state_dim = config["recsim_embedding_size"]
             airl = False
-            context_features = range(env.unwrapped.environment.user_model._user_sampler.get_user_ctor().NUM_FEATURES)
+            context_features = range(state_dim)
         else:
             state_dim = env.observation_space.shape[0]
             airl = True
@@ -321,10 +323,10 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
     if save_data:
         for key in data.keys():
             data[key] = np.array(data[key])
-        save_dir = os.path.join('data', 'assistive', env_name)
+        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
         Path(save_dir).mkdir(parents=True, exist_ok=True)
         suffix = get_largest_suffix(save_dir, 'data_')
-        file_path = os.path.join(save_dir, f'data_{suffix}.h5')
+        file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
         hf = h5py.File(file_path, 'w')
         for k, v in data.items():
             data_to_save = np.array(v)
