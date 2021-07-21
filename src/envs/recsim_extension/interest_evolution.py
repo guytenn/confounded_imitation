@@ -427,12 +427,12 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
   def sample_user(self):
     features = {}
     # Interests are distributed uniformly randomly
-    # features['user_interests'] = self._rng.beta(
-    #     self.alpha, self.beta, self.get_user_ctor().NUM_FEATURES)
-    # features['user_interests'] = 2 * (features['user_interests'] - 0.5)
-    features['user_interests'] = self._rng.uniform(
-        -1.0, 1.0,
-        self.get_user_ctor().NUM_FEATURES)
+    features['user_interests'] = self._rng.beta(
+        self.alpha, self.beta, self.get_user_ctor().NUM_FEATURES)
+    features['user_interests'] = 2 * (features['user_interests'] - 0.5)
+    # features['user_interests'] = self._rng.uniform(
+    #     -1.0, 1.0,
+    #     self.get_user_ctor().NUM_FEATURES)
     # Assume all users have fixed amount of time
     features['time_budget'] = 200.0  # 120.0
     features['no_click_mass'] = self._no_click_mass
