@@ -134,7 +134,7 @@ def make_recsim_env(config):
         "slate_size": 1,
         "resample_documents": True,
         "seed": 0,
-        "convert_to_discrete_action_space": False,
+        "convert_to_discrete_action_space": True,
         "alpha": 1,
         "beta": 1.1
     }
