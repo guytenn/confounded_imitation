@@ -130,11 +130,11 @@ def restore_samples(obs_samples, action_samples, observation_space):
 
 def make_recsim_env(config):
     DEFAULT_ENV_CONFIG = {
-        "num_candidates": 20,
-        "slate_size": 2,
+        "num_candidates": 5,
+        "slate_size": 1,
         "resample_documents": True,
         "seed": 0,
-        "convert_to_discrete_action_space": False,
+        "convert_to_discrete_action_space": True,
         "alpha": 1,
         "beta": 1.1
     }

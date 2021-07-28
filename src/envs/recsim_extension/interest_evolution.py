@@ -650,7 +650,7 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
   reward += np.linalg.norm(user_obs @ REWARD_MATRIX @ doc_obs.T)
   for response in responses:
     if response.clicked:
-      reward += response.watch_time
+      reward += 0*response.watch_time
   return reward
 
 
