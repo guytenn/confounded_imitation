@@ -130,7 +130,7 @@ DEFAULT_CONFIG = with_common_config({
     # MYOP (myopic), SARSA, QL (Q-Learning),
     "slateq_strategy": "QL",
     # user/doc embedding size for the recsim environment
-    "recsim_embedding_size": 20,
+    "recsim_embedding_size": 10,
     "dice_config": None,
     "wandb_logger": None
 })
