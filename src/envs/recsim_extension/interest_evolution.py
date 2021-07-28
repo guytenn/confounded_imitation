@@ -647,9 +647,10 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
     reward: A float representing the total watch time from the responses
   """
   reward = 0.0
+  reward += np.linalg.norm(user_obs @ REWARD_MATRIX @ doc_obs.T)
   for response in responses:
     if response.clicked:
-      reward += 0*response.watch_time + np.linalg.norm(user_obs @ REWARD_MATRIX @ doc_obs.T)
+      reward += response.watch_time
   return reward
 
 

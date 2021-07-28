@@ -343,8 +343,8 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RL for Assistive Gym')
-    parser.add_argument('--env', default='FeedingSawyer-v1',
-                        help='Environment to train on (default: ScratchItchJaco-v0)')
+    parser.add_argument('--env', default='FeedingGeneral-v1',
+                        help='Environment to train on (default: FeedingSawyer-v1)')
     parser.add_argument('--algo', default='ppo', choices=['ppo', 'sac', 'slateq'],
                         help='Reinforcement learning algorithm')
     parser.add_argument('--project_name', default='Confounded Imitation RL',

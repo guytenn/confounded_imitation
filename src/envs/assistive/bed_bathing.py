@@ -5,9 +5,15 @@ from .env import AssistiveEnv
 from .agents import furniture
 from .agents.furniture import Furniture
 
+
 class BedBathingEnv(AssistiveEnv):
-    def __init__(self, robot, human):
-        super(BedBathingEnv, self).__init__(robot=robot, human=human, task='bed_bathing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)))
+    def __init__(self, robot, human, context_params=None, seed=1001):
+        super(BedBathingEnv, self).__init__(robot=robot, human=human, task='bed_bathing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), seed=seed,
+                                            context_params=context_params,
+                                            context_fields=(
+                                            "velocity_weight", "force_nontarget_weight", "high_forces_weight",
+                                            "high_pressures_weight", "impairment", "gender",
+                                            "mass", "radius_scale", "height_scale"))
 
     def step(self, action):
         if self.human.controllable:
@@ -93,9 +99,11 @@ class BedBathingEnv(AssistiveEnv):
         elbow_pos_real, _ = self.robot.convert_to_realworld(elbow_pos)
         wrist_pos_real, _ = self.robot.convert_to_realworld(wrist_pos)
         self.tool_force, self.tool_force_on_human, self.total_force_on_human, self.new_contact_points = self.get_total_force()
-        robot_obs = np.concatenate([tool_pos_real, tool_orient_real, robot_joint_angles, shoulder_pos_real, elbow_pos_real, wrist_pos_real, [self.tool_force]]).ravel()
+        robot_obs = np.concatenate([tool_pos_real, tool_orient_real, robot_joint_angles, shoulder_pos_real, elbow_pos_real, wrist_pos_real, [self.tool_force]])
+        robot_obs_with_context = np.concatenate((robot_obs, self.context_vector)).ravel()
+
         if agent == 'robot':
-            return robot_obs
+            return robot_obs_with_context
         if self.human.controllable:
             human_joint_angles = self.human.get_joint_angles(self.human.controllable_joint_indices)
             tool_pos_human, tool_orient_human = self.human.convert_to_realworld(tool_pos, tool_orient)
@@ -106,8 +114,8 @@ class BedBathingEnv(AssistiveEnv):
             if agent == 'human':
                 return human_obs
             # Co-optimization with both human and robot controllable
-            return {'robot': robot_obs, 'human': human_obs}
-        return robot_obs
+            return {'robot': robot_obs_with_context, 'human': human_obs}
+        return robot_obs_with_context
 
     def reset(self):
         super(BedBathingEnv, self).reset()
