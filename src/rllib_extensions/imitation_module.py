@@ -54,9 +54,9 @@ class ImitationModule:
             action_shape = self.action_space.shape[0]
 
         if self.is_recsim:
-            input_shape = len(self.features_to_keep) + self.state_dim * action_shape + 1
+            input_shape = len(self.features_to_keep) + (self.state_dim // 2) * action_shape + 1
         else:
-            input_shape = len(self.features_to_keep) + action_shape+ 1
+            input_shape = len(self.features_to_keep) + action_shape + 1
         self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
         opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
@@ -76,10 +76,10 @@ class ImitationModule:
     def __call__(self, samples: SampleBatch) -> SampleBatch:
         if self.is_recsim:
             samples_batch = samples.policy_batches['default_policy']
-            s, a = restore_samples(samples_batch[SampleBatch.OBS],
-                                   samples_batch[SampleBatch.ACTIONS],
-                                   self.observation_space)
-
+            x, docs, a = restore_samples(samples_batch[SampleBatch.OBS],
+                                         samples_batch[SampleBatch.ACTIONS],
+                                         self.observation_space)
+            s = np.concatenate([x, docs], axis=-1)
             samples_input = {SampleBatch.OBS: s,
                              SampleBatch.ACTIONS: a,
                              SampleBatch.DONES: samples_batch[SampleBatch.DONES],

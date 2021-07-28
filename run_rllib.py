@@ -46,7 +46,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         # config['normalize_actions'] = False
     elif algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
-        config["hiddens"] = [100, 100]
+        config["hiddens"] = [256, 256]
         config["train_batch_size"] = 128
 
     config['wandb_logger'] = wandb_logger
@@ -99,13 +99,16 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         expert_data_path = os.path.join(load_dir, f'data_{suffix}.h5')
 
         if env_name == 'RecSim-v2':
-            state_dim = config["recsim_embedding_size"]
+            state_dim = config["recsim_embedding_size"] * 2
             airl = False
             context_features = range(state_dim)
+            hidden_dim = 256
         else:
             state_dim = env.observation_space.shape[0]
             airl = True
             context_features = env.unwrapped.context_features
+            hidden_dim = 100
+
         if n_confounders == -1:
             n_confounders = len(context_features)
 
@@ -115,7 +118,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
             "gamma": config['gamma'],
             "features_to_remove": context_features[:n_confounders] if no_context else [],
             "expert_path": expert_data_path,
-            "hidden_dim": 100,
+            "hidden_dim": hidden_dim,
             "dice_coef": dice_coef,
             "observation_space": env.observation_space,
             "action_space": env.action_space,
@@ -280,7 +283,8 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 obs, reward, done, info = env.step(action)
                 if save_data:
                     if env_name == 'RecSim-v2':
-                        episode_data['states'].append(prev_obs['user'])
+                        doc = np.concatenate([val[np.newaxis, :] for val in obs["doc"].values()], 0)
+                        episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
                         episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
                     else:
                         episode_data['states'].append(prev_obs)

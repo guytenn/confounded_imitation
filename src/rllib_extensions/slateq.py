@@ -84,7 +84,7 @@ DEFAULT_CONFIG = with_common_config({
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then
     # each worker will have a replay buffer of this size.
-    "buffer_size": 50000,
+    "buffer_size": 5000,
     # The number of contiguous environment steps to replay at once. This may
     # be set to greater than 1 to support recurrent models.
     "replay_sequence_length": 1,

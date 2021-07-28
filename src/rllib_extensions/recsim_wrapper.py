@@ -125,12 +125,12 @@ def restore_samples(obs_samples, action_samples, observation_space):
         index=actions.unsqueeze(2).expand(-1, -1, embedding_size))
     selected_doc = selected_doc.numpy().reshape(-1, np.prod(selected_doc.shape[1:]))
 
-    return obs['user'], selected_doc
+    return obs['user'], doc.sum(1).clip(0, 1), selected_doc
 
 
 def make_recsim_env(config):
     DEFAULT_ENV_CONFIG = {
-        "num_candidates": 10,
+        "num_candidates": 20,
         "slate_size": 2,
         "resample_documents": True,
         "seed": 0,
@@ -142,6 +142,8 @@ def make_recsim_env(config):
     env_config.update(config)
     if env_config["seed"] == -1:
         env_config["seed"] = np.random.randint(2 ** 30 - 1)
+    # env_config["seed"] = 0
+
     env = interest_evolution.create_environment(env_config)
     env = RecSimResetWrapper(env)
     env = RecSimObservationSpaceWrapper(env)
