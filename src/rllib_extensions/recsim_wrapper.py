@@ -132,7 +132,7 @@ def make_recsim_env(config):
     DEFAULT_ENV_CONFIG = {
         "num_candidates": 10,
         "slate_size": 1,
-        "resample_documents": False,
+        "resample_documents": True,
         "seed": 0,
         "convert_to_discrete_action_space": False,
         "alpha": 1,
