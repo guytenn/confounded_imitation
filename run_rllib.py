@@ -50,12 +50,25 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         config["train_batch_size"] = 128
 
     config['wandb_logger'] = wandb_logger
+    if env_name == 'RecSim-v2':
+        state_dim = 20  # config["recsim_embedding_size"] * 2
+        context_features = range(state_dim)
+        hidden_dim = 256
+    else:
+        state_dim = env.observation_space.shape[0]
+        airl = True
+        context_features = env.unwrapped.context_features
+        hidden_dim = 100
+    if n_confounders == -1:
+        n_confounders = len(context_features)
+
     if covariate_shift:
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 1.1,
-                    'beta': 1
+                    'alpha': 4,
+                    'beta': 2,
+                    'n_confounders': n_confounders
                 }
         else:
             config['env_config'] = \
@@ -84,7 +97,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
             config['env_config'] = \
                 {
                     'alpha': 1,
-                    'beta': 1.1
+                    'beta': 1.1,
+                    'n_confounders': 0  # even if n_confounders > 0 we set this to zero to not ruin the distribution
                 }
         else:
             config['env_config'] = {'context_params': None}
@@ -97,20 +111,6 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         load_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
         suffix = get_largest_suffix(load_dir, 'data_')
         expert_data_path = os.path.join(load_dir, f'data_{suffix}.h5')
-
-        if env_name == 'RecSim-v2':
-            state_dim = 20 #config["recsim_embedding_size"] * 2
-            airl = False
-            context_features = range(state_dim)
-            hidden_dim = 256
-        else:
-            state_dim = env.observation_space.shape[0]
-            airl = True
-            context_features = env.unwrapped.context_features
-            hidden_dim = 100
-
-        if n_confounders == -1:
-            n_confounders = len(context_features)
 
         config["dice_config"] = {
             "env_name": env_name,

@@ -403,6 +403,11 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
     return self._user_ctor(**features)
 
 
+
+
+DEFAULT_ALPHA = 1.0
+DEFAULT_BETA = 1.1
+
 @gin.configurable
 class UtilityModelUserSampler(user.AbstractUserSampler):
   """Class that samples users for utility model experiment."""
@@ -414,6 +419,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                min_normalizer=-1.0,
                alpha=0.5,
                beta=0.5,
+               n_confounders=0,
                **kwargs):
     """Creates a new user state sampler."""
     logging.debug('Initialized UtilityModelUserSampler')
@@ -422,13 +428,16 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     self._document_quality_factor = document_quality_factor
     self.alpha = alpha
     self.beta = beta
+    self.n_confounders = n_confounders
     super(UtilityModelUserSampler, self).__init__(user_ctor, **kwargs)
 
   def sample_user(self):
     features = {}
     # Interests are distributed uniformly randomly
-    features['user_interests'] = self._rng.beta(
-        self.alpha, self.beta, self.get_user_ctor().NUM_FEATURES)
+    features_default = features['user_interests'] = self._rng.beta(DEFAULT_ALPHA, DEFAULT_BETA, self.get_user_ctor().NUM_FEATURES)
+    features_confounded = self._rng.beta(self.alpha, self.beta, self.get_user_ctor().NUM_FEATURES)
+    features['user_interests'] = features_default
+    features['user_interests'][0:self.n_confounders] = features_confounded[0:self.n_confounders]
     features['user_interests'] = 2 * (features['user_interests'] - 0.5)
     # features['user_interests'] = self._rng.uniform(
     #     -1.0, 1.0,
@@ -472,6 +481,7 @@ class IEvUserModel(user.AbstractUserModel):
                no_click_mass=1.0,
                alpha=0.5,
                beta=0.5,
+               n_confounders=0,
                seed=0,
                alpha_x_intercept=1.0,
                alpha_y_intercept=0.3):
@@ -498,7 +508,7 @@ class IEvUserModel(user.AbstractUserModel):
     super(IEvUserModel, self).__init__(
         response_model_ctor,
         UtilityModelUserSampler(
-            user_ctor=user_state_ctor, no_click_mass=no_click_mass, alpha=alpha, beta=beta, seed=seed),
+            user_ctor=user_state_ctor, no_click_mass=no_click_mass, alpha=alpha, beta=beta, n_confounders=n_confounders, seed=seed),
         slate_size)
     if choice_model_ctor is None:
       raise Exception('A choice model needs to be specified!')
@@ -720,6 +730,7 @@ def create_environment(env_config):
       user_state_ctor=IEvUserState,
       alpha=env_config['alpha'],
       beta=env_config['beta'],
+      n_confounders=env_config['n_confounders'],
       seed=env_config['seed'])
 
   document_sampler = UtilityModelVideoSampler(

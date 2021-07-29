@@ -136,7 +136,8 @@ def make_recsim_env(config):
         "seed": 0,
         "convert_to_discrete_action_space": False,
         "alpha": 1,
-        "beta": 1.1
+        "beta": 1.1,
+        "n_confounders": 0
     }
     env_config = DEFAULT_ENV_CONFIG.copy()
     env_config.update(config)
