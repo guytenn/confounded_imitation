@@ -1,6 +1,7 @@
 from ray.rllib.env.wrappers.recsim_wrapper import make_recsim_env
 import numpy as np
 from tqdm import tqdm
+from src.envs.recsim_extension.interest_evolution import REWARD_MATRIX
 
 
 def compute_action(env):
@@ -9,12 +10,14 @@ def compute_action(env):
     documents = inner_env._candidate_set.get_documents(all_slates)
     user_state = inner_env.user_model._user_state
     doc_obs = [doc.create_observation() for doc in documents]
-    expected_utility = [user_state.score_document(doc_obs[i]) for i in range(len(doc_obs))]
-    quality = [doc.quality for doc in documents]
-    doc_scores = [user_state.user_quality_factor * expected_utility[i] + user_state.document_quality_factor * quality[i]
-                  for i in range(len(documents))]
+    # expected_utility = [user_state.score_document(doc_obs[i]) for i in range(len(doc_obs))]
+    # quality = [doc.quality for doc in documents]
+    # doc_scores = [user_state.user_quality_factor * expected_utility[i] + user_state.document_quality_factor * quality[i]
+    #               for i in range(len(documents))]
+    # action = np.array(doc_scores).argsort()[-2:][::-1]
 
-    action = np.array(doc_scores).argsort()[-2:][::-1]
+    user_obs = user_state.create_observation()
+    action = [np.argmax((user_obs @ REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)] @ np.stack(doc_obs).T) / 10)]
     return action
 
 # env = make_recsim_env({})

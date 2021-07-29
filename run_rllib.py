@@ -35,7 +35,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         config['num_sgd_iter'] = 50
         config['sgd_minibatch_size'] = 128
         config['lambda'] = 0.95
-        config['model']['fcnet_hiddens'] = [400, 300]
+        config['model']['fcnet_hiddens'] = [100, 100]
     elif algo == 'sac':
         # NOTE: pip3 install tensorflow_probability
         config = sac.DEFAULT_CONFIG.copy()
@@ -275,10 +275,10 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 done = done['__all__']
                 info = info['robot']
             else:
-                # if env_name == 'RecSim-v2':
-                #     action = recsim_expert.compute_action(env)
-                # else:
-                action = test_agent.compute_action(obs)
+                if env_name == 'RecSim-v2':
+                    action = recsim_expert.compute_action(env)
+                else:
+                    action = test_agent.compute_action(obs)
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
                 if save_data:

@@ -141,6 +141,10 @@ class RecSimGymEnv(gym.Env):
         info (dict): Contains responses for the full slate for
           debugging/learning.
     """
+    all_slates = list( self._environment._current_documents.keys())
+    documents = self._environment._candidate_set.get_documents(all_slates)
+    prev_doc_obs = np.stack([doc.create_observation() for doc in documents]).copy()
+
     user_obs, doc_obs, responses, done = self._environment.step(action)
     if isinstance(self._environment, environment.MultiUserEnvironment):
       all_responses = tuple(
@@ -158,7 +162,7 @@ class RecSimGymEnv(gym.Env):
         response=all_responses)
 
     # extract rewards from responses
-    reward = self._reward_aggregator(responses, user_obs, np.stack([list(doc_obs.values())[i] for i in action]))
+    reward = self._reward_aggregator(responses, user_obs, prev_doc_obs[action])
     info = self.extract_env_info()
     return obs, reward, done, info
 
