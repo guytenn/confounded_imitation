@@ -35,7 +35,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         config['num_sgd_iter'] = 50
         config['sgd_minibatch_size'] = 128
         config['lambda'] = 0.95
-        config['model']['fcnet_hiddens'] = [100, 100]
+        config['model']['fcnet_hiddens'] = [400, 300]
     elif algo == 'sac':
         # NOTE: pip3 install tensorflow_probability
         config = sac.DEFAULT_CONFIG.copy()
