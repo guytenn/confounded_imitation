@@ -17,7 +17,8 @@ def compute_action(env):
     # action = np.array(doc_scores).argsort()[-2:][::-1]
 
     user_obs = user_state.create_observation()
-    action = [np.argmax((user_obs @ REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)] @ np.stack(doc_obs).T) / 10)]
+
+    action = [np.argmax(np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30)[:, np.newaxis] * np.sin(REWARD_MATRIX @ np.stack(doc_obs).T / 30)) / 10))]
     return action
 
 # env = make_recsim_env({})

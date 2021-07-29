@@ -368,7 +368,7 @@ class IEvUserState(user.AbstractUserState):
   @classmethod
   def observation_space(cls):
     return spaces.Box(
-        shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-1.0, high=1.0)
+        shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-10.0, high=10.0)
 
 
 class IEvUserDistributionSampler(user.AbstractUserSampler):
@@ -698,7 +698,9 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
     reward: A float representing the total watch time from the responses
   """
   reward = 0.0
-  reward = np.sum(user_obs @ REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)] @ doc_obs.T) / (10 * len(doc_obs))
+  reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
+  # print(reward)
+  # reward = np.sum(user_obs @ doc_obs.T)
   for response in responses:
     if response.clicked:
       reward += 0*response.watch_time
