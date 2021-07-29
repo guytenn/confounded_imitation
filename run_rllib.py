@@ -35,7 +35,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         config['num_sgd_iter'] = 50
         config['sgd_minibatch_size'] = 128
         config['lambda'] = 0.95
-        config['model']['fcnet_hiddens'] = [400, 300]
+        config['model']['fcnet_hiddens'] = [100, 100]
     elif algo == 'sac':
         # NOTE: pip3 install tensorflow_probability
         config = sac.DEFAULT_CONFIG.copy()
@@ -99,7 +99,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         expert_data_path = os.path.join(load_dir, f'data_{suffix}.h5')
 
         if env_name == 'RecSim-v2':
-            state_dim = config["recsim_embedding_size"] * 2
+            state_dim = 20 #config["recsim_embedding_size"] * 2
             airl = False
             context_features = range(state_dim)
             hidden_dim = 256
@@ -284,7 +284,8 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
                 if save_data:
                     if env_name == 'RecSim-v2':
                         doc = np.concatenate([val[np.newaxis, :] for val in obs["doc"].values()], 0)
-                        episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
+                        # episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
+                        episode_data['states'].append(prev_obs['user'])
                         episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
                     else:
                         episode_data['states'].append(prev_obs)

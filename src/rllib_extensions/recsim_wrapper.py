@@ -125,7 +125,7 @@ def restore_samples(obs_samples, action_samples, observation_space):
         index=actions.unsqueeze(2).expand(-1, -1, embedding_size))
     selected_doc = selected_doc.numpy().reshape(-1, np.prod(selected_doc.shape[1:]))
 
-    return obs['user'], doc.sum(1).clip(0, 1), selected_doc
+    return obs['user'], selected_doc
 
 
 def make_recsim_env(config):

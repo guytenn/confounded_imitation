@@ -48,13 +48,14 @@ class ImitationModule:
         self.expert_buffer = ExpertData(data['states'].astype('float32'), data['actions'].astype('float32'),
                                         data['dones'], device=self.device)
 
-        if isinstance(self.action_space, spaces.Discrete):
-            action_shape = self.action_space.n
+        if self.is_recsim:
+            # action_shape = self.action_space.n
+            action_shape = self.state_dim
         else:
             action_shape = self.action_space.shape[0]
 
         if self.is_recsim:
-            input_shape = len(self.features_to_keep) + (self.state_dim // 2) * action_shape + 1
+            input_shape = len(self.features_to_keep) + action_shape + 1
         else:
             input_shape = len(self.features_to_keep) + action_shape + 1
         self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
@@ -75,15 +76,14 @@ class ImitationModule:
 
     def __call__(self, samples: SampleBatch) -> SampleBatch:
         if self.is_recsim:
-            samples_batch = samples.policy_batches['default_policy']
-            x, docs, a = restore_samples(samples_batch[SampleBatch.OBS],
-                                         samples_batch[SampleBatch.ACTIONS],
-                                         self.observation_space)
-            s = np.concatenate([x, docs], axis=-1)
-            samples_input = {SampleBatch.OBS: s,
-                             SampleBatch.ACTIONS: a,
+            samples_batch = samples
+            user, selected_doc = restore_samples(samples_batch[SampleBatch.OBS],
+                                                 samples_batch[SampleBatch.ACTIONS],
+                                                 self.observation_space)
+            samples_input = {SampleBatch.OBS: user,
+                             SampleBatch.ACTIONS: selected_doc,
                              SampleBatch.DONES: samples_batch[SampleBatch.DONES],
-                             SampleBatch.NEXT_OBS: s}
+                             SampleBatch.NEXT_OBS: user}
         else:
             samples_batch = samples_input = samples
         # ESTIMATE REWARD BONUS
