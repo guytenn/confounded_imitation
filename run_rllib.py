@@ -51,6 +51,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
 
     config['wandb_logger'] = wandb_logger
     if env_name == 'RecSim-v2':
+        airl = False
         state_dim = 20  # config["recsim_embedding_size"] * 2
         context_features = range(state_dim)
         hidden_dim = 256
