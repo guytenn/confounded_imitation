@@ -126,14 +126,14 @@ class ImitationModule:
         return torch.sigmoid(res)
 
     def _train(self, samples):
-        if self.is_recsim:
-            batch_size = len(samples)
-            dice_epochs = 1
-            alpha = 0.9
-        else:
-            batch_size = 128
-            dice_epochs = 50
-            alpha = 0.9
+        # if self.is_recsim:
+        #     batch_size = len(samples)
+        #     dice_epochs = 1
+        #     alpha = 0.9
+        # else:
+        batch_size = 128
+        dice_epochs = 3
+        alpha = 0.9
 
         for _ in range(dice_epochs):
             for _ in range(len(samples) // batch_size):
