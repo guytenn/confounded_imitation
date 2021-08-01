@@ -125,7 +125,7 @@ class IEvVideo(document.AbstractDocument):
   MAX_VIDEO_LENGTH = 100.0
 
   # The number of features to represent each video.
-  NUM_FEATURES = 5
+  NUM_FEATURES = 10
 
   def __init__(self,
                doc_id,
@@ -272,7 +272,7 @@ class IEvUserState(user.AbstractUserState):
   """Class to represent interest evolution users."""
 
   # Number of features in the user state representation.
-  NUM_FEATURES = 5
+  NUM_FEATURES = 10
 
   def __init__(self,
                user_interests,
@@ -708,7 +708,7 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
   reward = 0.0
   # reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
   # print(reward)
-  reward = np.sum(user_obs @ doc_obs.T)
+  reward = user_obs @ doc_obs.T
   for response in responses:
     if response.clicked:
       reward += 0 * response.watch_time
