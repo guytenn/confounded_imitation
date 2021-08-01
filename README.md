@@ -10,5 +10,5 @@ pip install git+https://github.com/Zackory/bullet3.git#egg=pybullet
 ## Example
 
 ```python
-python3 run_rllib.py --train --env RecSim-v2 --algo ppo --dice_coef 1 --wan  db --project_name recsim-v2 --run_name cov_shift_5--no_context --n_confounders $shift --data_suffix conf_5; done```
+python3 run_rllib.py --train --env RecSim-v2 --algo ppo --dice_coef 1 --wandb --project_name recsim-v2 --run_name cov_shift_5--no_context --n_confounders $shift --data_suffix conf_5; done```
 ```
