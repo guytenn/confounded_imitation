@@ -156,4 +156,5 @@ def make_recsim_env(config):
 env_name = "RecSim-v2"
 register_env(name=env_name, env_creator=lambda config: make_recsim_env({"alpha": config['alpha'],
                                                                         "beta": config['beta'],
+                                                                        "n_confounders": config['n_confounders'],
                                                                         "seed": -1}))

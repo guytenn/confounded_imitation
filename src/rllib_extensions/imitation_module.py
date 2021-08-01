@@ -102,9 +102,7 @@ class ImitationModule:
             rollouts[i][SampleBatch.REWARDS] = \
                 (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
                 self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
-            rollouts[i] = compute_advantages(rollouts[i],
-                                             0,
-                                             0.99, 0.95, True, True)
+            rollouts[i] = compute_advantages(rollouts[i], 0, 0.99, 0.95, True, True)
             start_idx += len(rollouts[i])
         samples_batch = SampleBatch.concat_samples(rollouts)
 
@@ -178,7 +176,7 @@ class ImitationModule:
 
         reward_bonus = reward_bonus.detach().cpu().numpy()
         if self.standardize:
-            reward_bonus = reward_bonus / max(1e-4, reward_bonus.std())
+            reward_bonus = (reward_bonus - reward_bonus.mean()) / max(1e-4, reward_bonus.std())
 
         return reward_bonus
 
