@@ -16,6 +16,8 @@ from src.rllib_extensions.recsim_wrapper import restore_samples
 import gym.spaces as spaces
 from src.common.utils import to_onehot
 
+from ray.rllib.evaluation.postprocessing import compute_advantages
+
 
 class ImitationModule:
     def __init__(self, dice_config):
@@ -92,8 +94,8 @@ class ImitationModule:
         # TRAIN DICE
         self._train(samples_input)
 
-        samples_batch[SampleBatch.REWARDS] = \
-            (1 - self.dice_coef) * samples_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
+        samples_batch[SampleBatch.REWARDS] *= 0#\
+            # (1 - self.dice_coef) * samples_batch[SampleBatch.REWARDS] + self.dice_coef * reward_bonus
 
         for i, info in enumerate(samples_batch[SampleBatch.INFOS]):
             info.update({'imitation_reward': reward_bonus[i]})

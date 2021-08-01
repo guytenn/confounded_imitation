@@ -405,8 +405,8 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
 
 
 
-DEFAULT_ALPHA = 1.0
-DEFAULT_BETA = 1.1
+DEFAULT_ALPHA = [1.5, 4]
+DEFAULT_BETA = [4, 4]
 
 @gin.configurable
 class UtilityModelUserSampler(user.AbstractUserSampler):
@@ -417,8 +417,8 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                document_quality_factor=1.0,
                no_click_mass=1.0,
                min_normalizer=-1.0,
-               alpha=0.5,
-               beta=0.5,
+               alpha=(1.5, 4),
+               beta=(4, 4),
                n_confounders=0,
                **kwargs):
     """Creates a new user state sampler."""
@@ -434,8 +434,15 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
   def sample_user(self):
     features = {}
     # Interests are distributed uniformly randomly
-    features_default = features['user_interests'] = self._rng.beta(DEFAULT_ALPHA, DEFAULT_BETA, self.get_user_ctor().NUM_FEATURES)
-    features_confounded = self._rng.beta(self.alpha, self.beta, self.get_user_ctor().NUM_FEATURES)
+    num_features = self.get_user_ctor().NUM_FEATURES
+    features_default = features['user_interests'] = \
+        self._rng.beta(np.linspace(DEFAULT_ALPHA[0], DEFAULT_ALPHA[1], num_features),
+                       np.linspace(DEFAULT_BETA[0], DEFAULT_BETA[1], num_features),
+                       num_features)
+    features_confounded = \
+        self._rng.beta(np.linspace(self.alpha[0], self.alpha[1], num_features),
+                       np.linspace(self.beta[0], self.beta[1], num_features),
+                       num_features)
     features['user_interests'] = features_default
     features['user_interests'][0:self.n_confounders] = features_confounded[0:self.n_confounders]
     features['user_interests'] = 2 * (features['user_interests'] - 0.5)
@@ -698,9 +705,9 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
     reward: A float representing the total watch time from the responses
   """
   reward = 0.0
-  reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
+  # reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
   # print(reward)
-  # reward = np.sum(user_obs @ doc_obs.T)
+  reward = np.sum(user_obs @ doc_obs.T)
   for response in responses:
     if response.clicked:
       reward += 0*response.watch_time

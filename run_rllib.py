@@ -67,8 +67,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 4,
-                    'beta': 2,
+                    'alpha': [10, 1.5],
+                    'beta': [4, 4],
                     'n_confounders': n_confounders
                 }
         else:
@@ -97,8 +97,8 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': 1,
-                    'beta': 1.1,
+                    'alpha': [1.5, 10],
+                    'beta': [4, 4],
                     'n_confounders': 0  # even if n_confounders > 0 we set this to zero to not ruin the distribution
                 }
         else:
@@ -250,7 +250,8 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, seed=seed)
-    test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
+    # test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
+    test_agent = None
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
@@ -312,6 +313,11 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
         sys.stdout.flush()
     # env.disconnect()
 
+    a = np.array(data['actions'])
+    b = np.argmax(a, axis=1)
+    h = [np.sum(b == i) for i in range(np.max(b))]
+    print(h)
+
     print('\n', '-'*50, '\n')
     # print('Rewards:', rewards)
     print('Reward Mean:', np.mean(rewards))
@@ -328,19 +334,19 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
     print('Task Length Mean:', np.mean(lengths))
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
-
-    if save_data:
-        for key in data.keys():
-            data[key] = np.array(data[key])
-        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-        Path(save_dir).mkdir(parents=True, exist_ok=True)
-        suffix = get_largest_suffix(save_dir, 'data_')
-        file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
-        hf = h5py.File(file_path, 'w')
-        for k, v in data.items():
-            data_to_save = np.array(v)
-            hf.create_dataset(k, data=data_to_save)
-        hf.close()
+    #
+    # if save_data:
+    #     for key in data.keys():
+    #         data[key] = np.array(data[key])
+    #     save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+    #     Path(save_dir).mkdir(parents=True, exist_ok=True)
+    #     suffix = get_largest_suffix(save_dir, 'data_')
+    #     file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+    #     hf = h5py.File(file_path, 'w')
+    #     for k, v in data.items():
+    #         data_to_save = np.array(v)
+    #         hf.create_dataset(k, data=data_to_save)
+    #     hf.close()
 
 
 if __name__ == '__main__':
