@@ -253,7 +253,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 
 
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix='', covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100, extra_configs={}):
-    ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
+    # ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, extra_configs, seed=seed)
     # test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
     test_agent = None
@@ -340,21 +340,21 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
 
-    # if save_data:
-    #     for key in data.keys():
-    #         data[key] = np.array(data[key])
-    #     save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-    #     Path(save_dir).mkdir(parents=True, exist_ok=True)
-    #     if data_suffix == '':
-    #         suffix = get_largest_suffix(save_dir, 'data_')
-    #         file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
-    #     else:
-    #         file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
-    #     hf = h5py.File(file_path, 'w')
-    #     for k, v in data.items():
-    #         data_to_save = np.array(v)
-    #         hf.create_dataset(k, data=data_to_save)
-    #     hf.close()
+    if save_data:
+        for key in data.keys():
+            data[key] = np.array(data[key])
+        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        if data_suffix == '':
+            suffix = get_largest_suffix(save_dir, 'data_')
+            file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+        else:
+            file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
+        hf = h5py.File(file_path, 'w')
+        for k, v in data.items():
+            data_to_save = np.array(v)
+            hf.create_dataset(k, data=data_to_save)
+        hf.close()
 
 
 if __name__ == '__main__':
@@ -436,5 +436,5 @@ if __name__ == '__main__':
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift, extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders})
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift, extra_configs={'alpha': [1.5, 10], 'beta': [4, 4], 'n_confounders': 10-args.n_confounders})
 
