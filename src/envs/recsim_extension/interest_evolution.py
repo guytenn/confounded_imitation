@@ -125,7 +125,7 @@ class IEvVideo(document.AbstractDocument):
   MAX_VIDEO_LENGTH = 100.0
 
   # The number of features to represent each video.
-  NUM_FEATURES = 20
+  NUM_FEATURES = 5
 
   def __init__(self,
                doc_id,
@@ -235,9 +235,10 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
     # cluster 0 will get min_utility. cluster
     # NUM_FEATURES - 1 will get max_utility
     # In between will be spaced as follows
-    trashy = np.linspace(self._min_utility, 0, int(self._num_clusters * 0.7))
-    nutritious = np.linspace(0, self._max_utility,
-                             int(self._num_clusters * 0.3))
+    n_trashy = int(self._num_clusters * 0.7)
+    n_nutritious = self._num_clusters - n_trashy
+    trashy = np.linspace(self._min_utility, 0, n_trashy)
+    nutritious = np.linspace(0, self._max_utility, n_nutritious)
     self.cluster_means = np.concatenate((trashy, nutritious))
 
   def sample_document(self):
@@ -271,7 +272,7 @@ class IEvUserState(user.AbstractUserState):
   """Class to represent interest evolution users."""
 
   # Number of features in the user state representation.
-  NUM_FEATURES = 20
+  NUM_FEATURES = 5
 
   def __init__(self,
                user_interests,

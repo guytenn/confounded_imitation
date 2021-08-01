@@ -52,6 +52,7 @@ class ImitationModule:
 
         if self.is_recsim:
             # action_shape = self.action_space.n
+            # action_shape = self.action_space.nvec[0]
             action_shape = self.state_dim
         else:
             action_shape = self.action_space.shape[0]
