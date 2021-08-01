@@ -318,10 +318,10 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
         sys.stdout.flush()
     # env.disconnect()
 
-    # a = np.array(data['actions'])
-    # b = np.argmax(a, axis=1)
-    # h = [np.sum(b == i) for i in range(np.max(b))]
-    # print(h)
+    a = np.array(data['actions'])
+    b = np.argmax(a, axis=1)
+    h = [np.sum(b == i) for i in range(np.max(b))]
+    print(f'Action Histogram: {h}')
 
     print('\n', '-'*50, '\n')
     # print('Rewards:', rewards)
@@ -340,21 +340,21 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
 
-    if save_data:
-        for key in data.keys():
-            data[key] = np.array(data[key])
-        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-        Path(save_dir).mkdir(parents=True, exist_ok=True)
-        if data_suffix == '':
-            suffix = get_largest_suffix(save_dir, 'data_')
-            file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
-        else:
-            file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
-        hf = h5py.File(file_path, 'w')
-        for k, v in data.items():
-            data_to_save = np.array(v)
-            hf.create_dataset(k, data=data_to_save)
-        hf.close()
+    # if save_data:
+    #     for key in data.keys():
+    #         data[key] = np.array(data[key])
+    #     save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+    #     Path(save_dir).mkdir(parents=True, exist_ok=True)
+    #     if data_suffix == '':
+    #         suffix = get_largest_suffix(save_dir, 'data_')
+    #         file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+    #     else:
+    #         file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
+    #     hf = h5py.File(file_path, 'w')
+    #     for k, v in data.items():
+    #         data_to_save = np.array(v)
+    #         hf.create_dataset(k, data=data_to_save)
+    #     hf.close()
 
 
 if __name__ == '__main__':
