@@ -98,11 +98,11 @@ class ImitationModule:
         rollouts = samples_batch.split_by_episode()
         start_idx = 0
         for i in range(len(rollouts)):
-            rollouts[i][SampleBatch.REWARDS][:-1] = \
-                (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS][:-1] + \
-                self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])-1]
+            rollouts[i][SampleBatch.REWARDS] = \
+                (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
+                self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
             rollouts[i] = compute_advantages(rollouts[i],
-                                             rollouts[i][SampleBatch.REWARDS][-1],
+                                             0,
                                              0.99, 0.95, True, True)
             start_idx += len(rollouts[i])
         samples_batch = SampleBatch.concat_samples(rollouts)
