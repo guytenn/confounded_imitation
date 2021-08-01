@@ -110,7 +110,7 @@ class ImitationModule:
             info.update({'imitation_reward': reward_bonus[i]})
 
         # Return the postprocessed sample batch (with the corrected rewards).
-        return samples
+        return samples_batch
 
 
     def _forward_model(self, obs, actions, next_obs, dones):
