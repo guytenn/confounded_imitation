@@ -406,7 +406,7 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
 
 
 
-DEFAULT_ALPHA = [1.5, 10]
+DEFAULT_ALPHA = [10, 1.5]
 DEFAULT_BETA = [4, 4]
 
 @gin.configurable
@@ -418,7 +418,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                document_quality_factor=1.0,
                no_click_mass=1.0,
                min_normalizer=-1.0,
-               alpha=(1.5, 4),
+               alpha=(10, 1.5),
                beta=(4, 4),
                n_confounders=0,
                **kwargs):
@@ -487,8 +487,8 @@ class IEvUserModel(user.AbstractUserModel):
                response_model_ctor=IEvResponse,
                user_state_ctor=IEvUserState,
                no_click_mass=1.0,
-               alpha=0.5,
-               beta=0.5,
+               alpha=(10, 1.5),
+               beta=(4, 4),
                n_confounders=0,
                seed=0,
                alpha_x_intercept=1.0,
@@ -708,9 +708,9 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
   reward = 0.0
   # reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
   # print(reward)
-  # reward = np.sum(user_obs @ doc_obs.T)
-  mat = REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)]
-  reward = np.sum(user_obs @ mat @ doc_obs.T) / 10
+  reward = np.sum(user_obs @ doc_obs.T)
+  # mat = REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)]
+  # reward = np.sum(user_obs @ mat @ doc_obs.T) / 10
   for response in responses:
     if response.clicked:
       reward += 0 * response.watch_time

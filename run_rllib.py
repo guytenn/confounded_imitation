@@ -25,7 +25,7 @@ from src.rllib_extensions.imitation_module import ImitationModule
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
 
-def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     env_name = 'RecSim-v2' if env.spec is None else env.spec.id
 
     if num_processes is None:
@@ -69,7 +69,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': [10, 1.5],
+                    'alpha': [1.5, 10],
                     'beta': [4, 4],
                     'n_confounders': n_confounders
                 }
@@ -99,7 +99,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': [1.5, 10],
+                    'alpha': [10, 1.5],
                     'beta': [4, 4],
                     'n_confounders': 0  # even if n_confounders > 0 we set this to zero to not ruin the distribution
                 }
@@ -112,8 +112,10 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
     config['framework'] = 'torch'
     if dice_coef > 0:
         load_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-        suffix = get_largest_suffix(load_dir, 'data_')
-        expert_data_path = os.path.join(load_dir, f'data_{suffix}.h5')
+        if data_suffix == '':
+            data_suffix = get_largest_suffix(load_dir, 'data_')
+        expert_data_path = os.path.join(load_dir, f'data_{data_suffix}.h5')
+
 
         config["dice_config"] = {
             "env_name": env_name,
@@ -127,7 +129,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
             "action_space": env.action_space,
             "state_dim": state_dim,
             'standardize': True,  # This seems quite important (normalize reward according to batch)
-            "airl": airl
+            "airl": airl,
             }
 
     # if algo == 'sac':
@@ -140,13 +142,13 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
     return {**config, **extra_configs}
 
 
-def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if env_name != "RecSim-v2":
         rllib_env_name = 'confounded_imitation:'+env_name
     else:
         rllib_env_name = env_name
 
-    config = setup_config(env, algo, dice_coef, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    config = setup_config(env, algo, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     agent = trainer_selector[algo](config, rllib_env_name)
 
     if load_policy and policy_path != '':
@@ -167,10 +169,10 @@ def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef
             return agent, None
     return agent, None
 
-def make_env(env_name, coop=False, seed=1001):
+def make_env(env_name, coop=False, env_config={}, seed=1001):
     if not coop:
         if env_name == 'RecSim-v2':
-            env = make_recsim_env({})
+            env = make_recsim_env(env_config)
         else:
             env = gym.make(env_name)
     else:
@@ -181,14 +183,14 @@ def make_env(env_name, coop=False, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, data_suffix='', coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v2':
         # env = None
         env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     if env_name != 'RecSim-v2':
         env.disconnect()
 
@@ -250,9 +252,9 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         return filename
 
 
-def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100,extra_configs={}):
+def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix='', covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-    env = make_env(env_name, coop, seed=seed)
+    env = make_env(env_name, coop, extra_configs, seed=seed)
     # test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
     test_agent = None
 
@@ -337,14 +339,17 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
     print('Task Length Mean:', np.mean(lengths))
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
-    #
+
     if save_data:
         for key in data.keys():
             data[key] = np.array(data[key])
         save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
         Path(save_dir).mkdir(parents=True, exist_ok=True)
-        suffix = get_largest_suffix(save_dir, 'data_')
-        file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+        if data_suffix == '':
+            suffix = get_largest_suffix(save_dir, 'data_')
+            file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+        else:
+            file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
         hf = h5py.File(file_path, 'w')
         for k, v in data.items():
             data_to_save = np.array(v)
@@ -384,6 +389,8 @@ if __name__ == '__main__':
                         help='Minimum total reward to save while creating data')
     parser.add_argument('--save-data', action='store_true', default=False,
                         help='Whether to save data of policy over n_episodes')
+    parser.add_argument('--data_suffix', default='',
+                        help='Use special suffix for data (saving and loading)')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
     parser.add_argument('--dice_coef', type=float, default=0,
@@ -425,9 +432,9 @@ if __name__ == '__main__':
 
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, data_suffix=args.data_suffix, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, covariate_shift=args.covariate_shift)
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift, extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders})
 
