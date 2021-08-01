@@ -176,7 +176,7 @@ def get_policy_class(config: TrainerConfigDict) -> Optional[Type[Policy]]:
             If None, use `default_policy` provided in build_trainer().
     """
     if config["framework"] == "torch":
-        from ray.rllib.agents.ppo.ppo_torch_policy import PPOTorchPolicy
+        from src.rllib_extensions.imppo_torch_policy import PPOTorchPolicy
         return PPOTorchPolicy
 
 
@@ -268,6 +268,7 @@ def execution_plan(workers: WorkerSet,
     rollouts = rollouts.for_each(
         SelectExperiences(workers.trainable_policies()))
     # Concatenate the SampleBatches into one.
+
     rollouts = rollouts.combine(
         ConcatBatches(
             min_batch_size=config["train_batch_size"],
@@ -276,6 +277,7 @@ def execution_plan(workers: WorkerSet,
 
     if config["dice_config"] is not None:
         rollouts = rollouts.for_each(ImitationModule(config['dice_config']))
+
     # Use Dice on rollout to change reward
     # Standardize advantages.
     rollouts = rollouts.for_each(StandardizeFields(["advantages"]))

@@ -3,7 +3,8 @@ from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
 # from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
-from ray.rllib.agents import ppo, sac
+import src.rllib_extensions.imppo as ppo
+from ray.rllib.agents import sac#,ppo
 from src.rllib_extensions import slateq
 from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
@@ -19,6 +20,7 @@ from pathlib import Path
 from src.data.utils import get_largest_suffix
 from src.rllib_extensions.dice import DICE
 import recsim_expert
+from src.rllib_extensions.imitation_module import ImitationModule
 
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
@@ -127,6 +129,7 @@ def setup_config(env, algo, dice_coef=0, no_context=False, n_confounders=-1, cov
             'standardize': True,  # This seems quite important (normalize reward according to batch)
             "airl": airl
             }
+
     # if algo == 'sac':
     #     config['num_workers'] = 1
     if coop:
@@ -313,10 +316,10 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
         sys.stdout.flush()
     # env.disconnect()
 
-    a = np.array(data['actions'])
-    b = np.argmax(a, axis=1)
-    h = [np.sum(b == i) for i in range(np.max(b))]
-    print(h)
+    # a = np.array(data['actions'])
+    # b = np.argmax(a, axis=1)
+    # h = [np.sum(b == i) for i in range(np.max(b))]
+    # print(h)
 
     print('\n', '-'*50, '\n')
     # print('Rewards:', rewards)
@@ -335,18 +338,18 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, covariate_shif
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
     #
-    # if save_data:
-    #     for key in data.keys():
-    #         data[key] = np.array(data[key])
-    #     save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-    #     Path(save_dir).mkdir(parents=True, exist_ok=True)
-    #     suffix = get_largest_suffix(save_dir, 'data_')
-    #     file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
-    #     hf = h5py.File(file_path, 'w')
-    #     for k, v in data.items():
-    #         data_to_save = np.array(v)
-    #         hf.create_dataset(k, data=data_to_save)
-    #     hf.close()
+    if save_data:
+        for key in data.keys():
+            data[key] = np.array(data[key])
+        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        suffix = get_largest_suffix(save_dir, 'data_')
+        file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
+        hf = h5py.File(file_path, 'w')
+        for k, v in data.items():
+            data_to_save = np.array(v)
+            hf.create_dataset(k, data=data_to_save)
+        hf.close()
 
 
 if __name__ == '__main__':
