@@ -44,7 +44,7 @@ class RecSimObservationSpaceWrapper(gym.ObservationWrapper):
             OrderedDict([
                 ("user", obs_space["user"]),
                 ("doc", doc_space),
-                ("response", obs_space["response"]),
+                # ("response", obs_space["response"]),
             ]))
 
     def observation(self, obs):
@@ -54,7 +54,7 @@ class RecSimObservationSpaceWrapper(gym.ObservationWrapper):
             str(k): v
             for k, (_, v) in enumerate(obs["doc"].items())
         }
-        new_obs["response"] = obs["response"]
+        # new_obs["response"] = obs["response"]
         return new_obs
 
 
