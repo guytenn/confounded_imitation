@@ -406,7 +406,7 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
 
 
 
-DEFAULT_ALPHA = [10, 1.5]
+DEFAULT_ALPHA = [1.5, 10]
 DEFAULT_BETA = [4, 4]
 
 @gin.configurable
@@ -418,7 +418,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                document_quality_factor=1.0,
                no_click_mass=1.0,
                min_normalizer=-1.0,
-               alpha=(10, 1.5),
+               alpha=(1.5, 10),
                beta=(4, 4),
                n_confounders=0,
                **kwargs):
@@ -487,7 +487,7 @@ class IEvUserModel(user.AbstractUserModel):
                response_model_ctor=IEvResponse,
                user_state_ctor=IEvUserState,
                no_click_mass=1.0,
-               alpha=(10, 1.5),
+               alpha=(1.5, 10),
                beta=(4, 4),
                n_confounders=0,
                seed=0,

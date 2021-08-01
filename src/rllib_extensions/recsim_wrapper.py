@@ -135,7 +135,7 @@ def make_recsim_env(config):
         "resample_documents": True,
         "seed": 0,
         "convert_to_discrete_action_space": False,
-        "alpha": [10, 1.5],
+        "alpha": [1.5, 10],
         "beta": [4, 4],
         "n_confounders": 0
     }

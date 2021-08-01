@@ -69,7 +69,7 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': [1.5, 10],
+                    'alpha': [10, 1.5],
                     'beta': [4, 4],
                     'n_confounders': n_confounders
                 }
@@ -99,7 +99,7 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': [10, 1.5],
+                    'alpha': [1.5, 10],
                     'beta': [4, 4],
                     'n_confounders': 0  # even if n_confounders > 0 we set this to zero to not ruin the distribution
                 }
@@ -436,5 +436,5 @@ if __name__ == '__main__':
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift, extra_configs={'alpha': [1.5, 10], 'beta': [4, 4], 'n_confounders': args.n_confounders})
+        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift, extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders})
 
