@@ -145,7 +145,7 @@ class ImitationModule:
         alpha = 0.9
 
         for _ in range(dice_epochs):
-            for _ in range(len(samples) // batch_size):
+            for _ in range(len(samples[SampleBatch.OBS]) // batch_size):
                 expert_data = self.expert_buffer.sample(batch_size)
 
                 expert_d = self._forward_model(expert_data.observations[:, self.features_to_keep],
