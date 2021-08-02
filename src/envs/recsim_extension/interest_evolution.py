@@ -406,7 +406,7 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
 
 
 
-DEFAULT_ALPHA = [10, 1.5]
+DEFAULT_ALPHA = [1.5, 10]
 DEFAULT_BETA = [4, 4]
 
 @gin.configurable

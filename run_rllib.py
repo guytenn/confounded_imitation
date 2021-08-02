@@ -69,7 +69,7 @@ def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix=''
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
-                    'alpha': [1.5, 10],
+                    'alpha': [10, 1.5],
                     'beta': [4, 4],
                     'n_confounders': n_confounders,
                     'confounding_strength': 1
@@ -444,5 +444,5 @@ if __name__ == '__main__':
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
         evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift,
-                        extra_configs={'alpha': [1.5, 10], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
+                        extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
 
