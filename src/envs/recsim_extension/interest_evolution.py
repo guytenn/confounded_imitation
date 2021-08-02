@@ -406,7 +406,7 @@ class IEvUserDistributionSampler(user.AbstractUserSampler):
 
 
 
-DEFAULT_ALPHA = [1.5, 10]
+DEFAULT_ALPHA = [10, 1.5]
 DEFAULT_BETA = [4, 4]
 
 @gin.configurable
@@ -418,8 +418,8 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                document_quality_factor=1.0,
                no_click_mass=1.0,
                min_normalizer=-1.0,
-               alpha=(1.5, 10),
-               beta=(4, 4),
+               alpha=None,
+               beta=None,
                n_confounders=0,
                confounding_strength=1,
                **kwargs):
@@ -442,14 +442,15 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
         self._rng.beta(np.linspace(DEFAULT_ALPHA[0], DEFAULT_ALPHA[1], num_features),
                        np.linspace(DEFAULT_BETA[0], DEFAULT_BETA[1], num_features),
                        num_features)
-    features_confounded = \
-        self._rng.beta(np.linspace(self.alpha[0], self.alpha[1], num_features),
-                       np.linspace(self.beta[0], self.beta[1], num_features),
-                       num_features)
-    features['user_interests'] = features_default
-    features['user_interests'][0:self.n_confounders] = \
-        self.confounding_strength * features_confounded[0:self.n_confounders] + \
-        (1-self.confounding_strength) * features_default[0:self.n_confounders]
+    if self.alpha is not None:
+        features_confounded = \
+            self._rng.beta(np.linspace(self.alpha[0], self.alpha[1], num_features),
+                           np.linspace(self.beta[0], self.beta[1], num_features),
+                           num_features)
+        features['user_interests'] = features_default
+        features['user_interests'][0:self.n_confounders] = \
+            self.confounding_strength * features_confounded[0:self.n_confounders] + \
+            (1-self.confounding_strength) * features_default[0:self.n_confounders]
     features['user_interests'] = 2 * (features['user_interests'] - 0.5)
     # features['user_interests'] = self._rng.uniform(
     #     -1.0, 1.0,
@@ -491,8 +492,8 @@ class IEvUserModel(user.AbstractUserModel):
                response_model_ctor=IEvResponse,
                user_state_ctor=IEvUserState,
                no_click_mass=1.0,
-               alpha=(1.5, 10),
-               beta=(4, 4),
+               alpha=None,
+               beta=None,
                n_confounders=0,
                confounding_strength=1,
                seed=0,
