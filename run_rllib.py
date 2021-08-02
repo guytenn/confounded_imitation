@@ -375,8 +375,8 @@ if __name__ == '__main__':
                         help='Remove context for imitation')
     parser.add_argument('--n_confounders', type=int, default=-1,
                         help='Number of confounders when no context is on (default: -1)')
-    parser.add_argument('--confounding_strength', type=float, default=1,
-                        help='Interpolate between covariate shift distribution when confounding is present')
+    parser.add_argument('--confounding_strength', type=float, default=10,
+                        help='Interpolate between covariate shift distribution when confounding is present, number between 0 and 10')
     parser.add_argument('--covariate_shift', action='store_true', default=False,
                         help='Add covariate shift to environment')
     parser.add_argument('--num-processes', type=int, default=-1,
@@ -439,5 +439,5 @@ if __name__ == '__main__':
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
         evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift,
-                        extra_configs={'alpha': [1.5, 10], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength})
+                        extra_configs={'alpha': [1.5, 10], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
 
