@@ -71,7 +71,8 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
                 {
                     'alpha': [1.5, 10],
                     'beta': [4, 4],
-                    'n_confounders': n_confounders
+                    'n_confounders': n_confounders,
+                    'confounding_strength': 1
                 }
         else:
             config['env_config'] = \
@@ -101,7 +102,8 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
                 {
                     'alpha': None,
                     'beta': None,
-                    'n_confounders': 0  # even if n_confounders > 0 we set this to zero to not ruin the distribution
+                    'n_confounders': 0,  # even if n_confounders > 0 we set this to zero to not ruin the distribution
+                    'confounding_strength': 0
                 }
         else:
             config['env_config'] = {'context_params': None}
