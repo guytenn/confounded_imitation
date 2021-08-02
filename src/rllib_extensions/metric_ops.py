@@ -125,10 +125,17 @@ class CollectMetrics:
         res["custom_metrics"].update(custom_metrics_from_info)
 
         if self.wandb_logger is not None:
+            policy = self.workers.local_worker().policy_map['default_policy']
             log_dict = {'reward_min': res['episode_reward_min'],
                         'reward_max': res['episode_reward_max'],
                         'reward_mean': res['episode_reward_mean'],
-                        'reward_std': np.std(res['hist_stats']['episode_reward'])}
+                        'reward_std': np.std(res['hist_stats']['episode_reward']),
+                        'policy_loss_mean': policy._mean_policy_loss.item(),
+                        'vf_loss_mean': policy._mean_vf_loss.item(),
+                        'total_loss': policy._total_loss.item()
+                        }
+            if 'extra_info' in policy.config:
+                log_dict.update(policy.config['extra_info'])
 
             self.wandb_logger.log(log_dict,
                                   step=res['timesteps_total'])

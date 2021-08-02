@@ -16,11 +16,12 @@ from src.rllib_extensions.recsim_wrapper import restore_samples
 import gym.spaces as spaces
 from src.common.utils import to_onehot
 
-from ray.rllib.evaluation.postprocessing import compute_advantages
+from ray.rllib.evaluation.postprocessing import compute_gae_for_sample_batch
 
 
 class ImitationModule:
-    def __init__(self, dice_config):
+    def __init__(self, workers, dice_config):
+        self.workers = workers
         self.is_recsim = dice_config['env_name'] == 'RecSim-v2'
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
@@ -78,6 +79,8 @@ class ImitationModule:
 
 
     def __call__(self, samples: SampleBatch) -> SampleBatch:
+        policy = self.workers.local_worker().policy_map['default_policy']
+
         if self.is_recsim:
             samples_batch = samples
             user, selected_doc = restore_samples(samples_batch[SampleBatch.OBS],
@@ -102,12 +105,13 @@ class ImitationModule:
             rollouts[i][SampleBatch.REWARDS] = \
                 (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
                 self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
-            rollouts[i] = compute_advantages(rollouts[i], 0, 0.99, 0.95, True, True)
+            # rollouts[i] = compute_advantages(rollouts[i], 0, 0.99, 0.95, True, True)
+            rollouts[i] = compute_gae_for_sample_batch(policy, rollouts[i])
             start_idx += len(rollouts[i])
         samples_batch = SampleBatch.concat_samples(rollouts)
 
-        for i, info in enumerate(samples_batch[SampleBatch.INFOS]):
-            info.update({'imitation_reward': reward_bonus[i]})
+        # Send back extra info for metrics
+        policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean()}
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples_batch

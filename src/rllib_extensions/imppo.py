@@ -22,6 +22,7 @@ from ray.rllib.execution.train_ops import TrainOneStep, TrainTFMultiGPU
 from ray.rllib.policy.policy import LEARNER_STATS_KEY, Policy
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.utils.deprecation import DEPRECATED_VALUE
+from ray.rllib.utils.deprecation import DEPRECATED_VALUE
 from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
@@ -85,7 +86,7 @@ DEFAULT_CONFIG = with_common_config({
     # Target value for KL divergence.
     "kl_target": 0.01,
     # Whether to rollout "complete_episodes" or "truncate_episodes".
-    "batch_mode": "complete_episodes",
+    "batch_mode": "truncate_episodes", #"complete_episodes",
     # Which observation filter to apply to the observation.
     "observation_filter": "NoFilter",
 
@@ -276,7 +277,7 @@ def execution_plan(workers: WorkerSet,
         ))
 
     if config["dice_config"] is not None:
-        rollouts = rollouts.for_each(ImitationModule(config['dice_config']))
+        rollouts = rollouts.for_each(ImitationModule(workers, config['dice_config']))
 
     # Use Dice on rollout to change reward
     # Standardize advantages.
