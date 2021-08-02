@@ -141,7 +141,7 @@ class ImitationModule:
         #     alpha = 0.9
         # else:
         batch_size = 128
-        dice_epochs = 3
+        dice_epochs = 50
         alpha = 0.9
 
         for _ in range(dice_epochs):
