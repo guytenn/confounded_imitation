@@ -137,7 +137,8 @@ def make_recsim_env(config):
         "convert_to_discrete_action_space": False,
         "alpha": [1.5, 10],
         "beta": [4, 4],
-        "n_confounders": 0
+        "n_confounders": 0,
+        "confounding_strength": 1
     }
     env_config = DEFAULT_ENV_CONFIG.copy()
     env_config.update(config)
@@ -157,4 +158,5 @@ env_name = "RecSim-v2"
 register_env(name=env_name, env_creator=lambda config: make_recsim_env({"alpha": config['alpha'],
                                                                         "beta": config['beta'],
                                                                         "n_confounders": config['n_confounders'],
+                                                                        "confounding_strength": config['confounding_strength'],
                                                                         "seed": -1}))

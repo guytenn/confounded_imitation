@@ -421,6 +421,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                alpha=(1.5, 10),
                beta=(4, 4),
                n_confounders=0,
+               confounding_strength=1,
                **kwargs):
     """Creates a new user state sampler."""
     logging.debug('Initialized UtilityModelUserSampler')
@@ -430,6 +431,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     self.alpha = alpha
     self.beta = beta
     self.n_confounders = n_confounders
+    self.confounding_strength = confounding_strength
     super(UtilityModelUserSampler, self).__init__(user_ctor, **kwargs)
 
   def sample_user(self):
@@ -445,7 +447,9 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
                        np.linspace(self.beta[0], self.beta[1], num_features),
                        num_features)
     features['user_interests'] = features_default
-    features['user_interests'][0:self.n_confounders] = features_confounded[0:self.n_confounders]
+    features['user_interests'][0:self.n_confounders] = \
+        self.confounding_strength * features_confounded[0:self.n_confounders] + \
+        (1-self.confounding_strength) * features_default[0:self.n_confounders]
     features['user_interests'] = 2 * (features['user_interests'] - 0.5)
     # features['user_interests'] = self._rng.uniform(
     #     -1.0, 1.0,
@@ -490,6 +494,7 @@ class IEvUserModel(user.AbstractUserModel):
                alpha=(1.5, 10),
                beta=(4, 4),
                n_confounders=0,
+               confounding_strength=1,
                seed=0,
                alpha_x_intercept=1.0,
                alpha_y_intercept=0.3):
@@ -516,7 +521,7 @@ class IEvUserModel(user.AbstractUserModel):
     super(IEvUserModel, self).__init__(
         response_model_ctor,
         UtilityModelUserSampler(
-            user_ctor=user_state_ctor, no_click_mass=no_click_mass, alpha=alpha, beta=beta, n_confounders=n_confounders, seed=seed),
+            user_ctor=user_state_ctor, no_click_mass=no_click_mass, alpha=alpha, beta=beta, n_confounders=n_confounders, confounding_strength=confounding_strength, seed=seed),
         slate_size)
     if choice_model_ctor is None:
       raise Exception('A choice model needs to be specified!')
@@ -743,6 +748,7 @@ def create_environment(env_config):
       alpha=env_config['alpha'],
       beta=env_config['beta'],
       n_confounders=env_config['n_confounders'],
+      confounding_strength=env_config['confounding_strength'],
       seed=env_config['seed'])
 
   document_sampler = UtilityModelVideoSampler(
