@@ -25,7 +25,7 @@ from src.rllib_extensions.imitation_module import ImitationModule
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
 
-def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     env_name = 'RecSim-v2' if env.spec is None else env.spec.id
 
     if num_processes is None:
@@ -121,6 +121,7 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
 
         config["dice_config"] = {
             "env_name": env_name,
+            "imitation_method": imitation_method,
             "lr": 0.0001,
             "gamma": config['gamma'],
             "features_to_remove": context_features[:n_confounders] if no_context else [],
@@ -144,13 +145,13 @@ def setup_config(env, algo, dice_coef=0, data_suffix='', no_context=False, n_con
     return {**config, **extra_configs}
 
 
-def load_agent(env, algo, env_name, policy_path='', load_policy=False, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def load_agent(env, algo, imitation_method, env_name, policy_path='', load_policy=False, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
     if env_name != "RecSim-v2":
         rllib_env_name = 'confounded_imitation:'+env_name
     else:
         rllib_env_name = env_name
 
-    config = setup_config(env, algo, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    config = setup_config(env, algo, imitation_method, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     agent = trainer_selector[algo](config, rllib_env_name)
 
     if load_policy and policy_path != '':
@@ -185,14 +186,14 @@ def make_env(env_name, coop=False, env_config={}, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, data_suffix='', coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
+def train(env_name, algo, timesteps_total=1000000, imitation_method='gail', save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, data_suffix='', coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     if env_name == 'RecSim-v2':
         # env = None
         env = make_recsim_env({})
     else:
         env = make_env(env_name, coop)
-    agent, checkpoint_path = load_agent(env, algo, env_name, load_policy_path, load_policy, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
+    agent, checkpoint_path = load_agent(env, algo, imitation_method, env_name, load_policy_path, load_policy, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
     if env_name != 'RecSim-v2':
         env.disconnect()
 
@@ -222,7 +223,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_agent(env, algo, env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
+    test_agent, _ = load_agent(env, algo, 'gail', env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -257,7 +258,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix='', covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100, extra_configs={}):
     # ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, extra_configs, seed=seed)
-    # test_agent, _ = load_agent(env, algo, env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
+    # test_agent, _ = load_agent(env, algo, 'gail', env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
     test_agent = None
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
@@ -373,6 +374,8 @@ if __name__ == '__main__':
                         help='Random seed (default: -1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
+    parser.add_argument('--imitation_method', default='gail', choices=['gail', 'chi', 'kl'],
+                        help='imitation method to use')
     parser.add_argument('--no_context', action='store_true', default=False,
                         help='Remove context for imitation')
     parser.add_argument('--n_confounders', type=int, default=-1,
@@ -436,7 +439,7 @@ if __name__ == '__main__':
 
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, data_suffix=args.data_suffix, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
+        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, imitation_method=args.imitation_method, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, data_suffix=args.data_suffix, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:

@@ -22,6 +22,7 @@ from ray.rllib.evaluation.postprocessing import compute_gae_for_sample_batch
 class ImitationModule:
     def __init__(self, workers, dice_config):
         self.workers = workers
+        self.imitation_method = dice_config['imitation_method']
         self.is_recsim = dice_config['env_name'] == 'RecSim-v2'
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
@@ -127,7 +128,11 @@ class ImitationModule:
             res = rs + self.gamma * (1 - dones.float()) * next_vs - vs
         else:
             res = rs
-        return torch.sigmoid(res)
+
+        if self.imitation_method == 'gail':
+            return torch.sigmoid(res)
+        else:
+            return res
 
     def _train(self, samples):
         # if self.is_recsim:
@@ -156,11 +161,15 @@ class ImitationModule:
                                                torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx][:, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device))
 
-                # loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
-                # kl divergence
-                # loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
-                # GAIL loss
-                loss = -torch.log(1 - policy_d + float(1e-6)).mean() - torch.log(expert_d + float(1e-6)).mean()
+                if self.imitation_method == 'gail':
+                    loss = -torch.log(1 - policy_d + float(1e-6)).mean() - torch.log(expert_d + float(1e-6)).mean()
+                elif self.imitation_method == 'kl':
+                    loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
+                elif self.imitation_method == 'chi':
+                    loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                else:
+                    raise ValueError(f'Unknown imitation method {self.imitation_method}')
+
                 # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
                 self.optimizer.zero_grad()
@@ -174,9 +183,12 @@ class ImitationModule:
         policy_dones = torch.from_numpy(samples[SampleBatch.DONES]).float().to(self.device)
 
         policy_d = self._forward_model(policy_obs, policy_actions, policy_next_obs, policy_dones)
-        # policy_d = torch.sigmoid(policy_d)
-        # reward_bonus = -policy_d
-        reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
+
+        if self.imitation_method == 'gail':
+            reward_bonus = -torch.log(1.0 - policy_d * (1.0 - float(1e-6)))
+        else:
+            # Comment: It might work better to use sigmoid and use same log reward as in gail
+            reward_bonus = -policy_d
 
         reward_bonus = reward_bonus.detach().cpu().numpy()
         if self.standardize:
