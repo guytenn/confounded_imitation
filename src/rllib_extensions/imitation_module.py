@@ -131,7 +131,8 @@ class ImitationModule:
         samples_batch = SampleBatch.concat_samples(rollouts)
 
         # Send back extra info for metrics
-        policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean()}
+        policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean(),
+                                       "augmented_total_reward": samples_batch[SampleBatch.REWARDS].mean()}
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples_batch
