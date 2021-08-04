@@ -105,10 +105,11 @@ class ImitationModule:
             for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
                 target_param.data.copy_(param.data)
             n_traj = self.expert_buffer.dones.sum()
-            instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-0.95, upper=1))
-            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=20)
-            weights = optimizer.minimize(lambda w: self._sampler(samples_input, w)).value[0][0]
-            projected_weights = (weights + 1) / 2
+            cov_sensitivity = 0.2  # number between 0 and 1. Higher means will attempt larger covariate shifts sampling
+            instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-1, upper=1))
+            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=10)
+            weights = optimizer.minimize(lambda w: self._sampler(samples_input, cov_sensitivity, w)).value[0][0]
+            projected_weights = weights + 1. / cov_sensitivity
             sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
                                                      self.expert_buffer.traj_lengths)
         else:
@@ -157,8 +158,8 @@ class ImitationModule:
         else:
             return res
 
-    def _sampler(self, samples, weights):
-        projected_weights = (weights + 1) / 2
+    def _sampler(self, samples, cov_sensitivity, weights):
+        projected_weights = weights + 1. / cov_sensitivity
         sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
                                                  self.expert_buffer.traj_lengths)
         return self._train(samples, sample_weights, use_clone=True).item()
