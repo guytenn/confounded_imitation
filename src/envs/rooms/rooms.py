@@ -14,7 +14,7 @@ c2rgb = [[0, 0, 255],
 
 # APPLE_CELLS = [(9, 10), (9, 8), (12, 10), (1, 7), (5, 4), (5, 14), (1, 13), (7, 2), (4, 2), (14, 1), (5, 1), (3, 4), (9, 3), (9, 14), (9, 2), (2, 13), (6, 4), (10, 4), (4, 10), (7, 5)]
 MINE_CELLS = [(4, 6), (2, 12), (8, 10), (4, 1), (14, 6), (4, 8), (4, 7), (10, 12), (5, 13), (5, 8), (7, 10), (9, 9), (2, 7), (11, 14), (4, 13), (5, 11), (13, 3), (8, 1), (4, 12), (10, 2)]
-START_CELL = [(7, 1)]
+START_CELL = [(1, 1)]
 APPLE_CELLS = [(1, 13), (13, 13)]
 GOAL_CELLS = [(1, 13), (13, 13)]
 
@@ -22,9 +22,9 @@ GOAL_CELLS = [(1, 13), (13, 13)]
 class RoomsEnv(core.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, rows=15, cols=15, empty=True, random_walls=False,
-                 obstacles: Iterable[Union[Tuple, List]] = None, spatial=False,
-                 n_apples=1, n_mines=5,
+    def __init__(self, rows=15, cols=15, empty=False, random_walls=True,
+                 obstacles: Iterable[Union[Tuple, List]] = None, spatial=True,
+                 n_apples=0, n_mines=0,
                  action_repeats=1, max_steps=None, seed=None, fixed_reset=True,
                  mask_size=0, px=(0.2, 0.8),
                  wind_in_state=False, random_wind=False, vert_wind=(0.2, 0.2), horz_wind=(0.2, 0.2)):
