@@ -102,9 +102,11 @@ class ImitationModule:
 
         # ESTIMATE TRAJECTORY SAMPLE MINIMIZER
         if self.dice_coef < 1:
+            for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
+                target_param.data.copy_(param.data)
             n_traj = self.expert_buffer.dones.sum()
             instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-0.95, upper=1))
-            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=100)
+            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=10)
             weights = optimizer.minimize(lambda w: self._sampler(samples_input, w)).value
             projected_weights = (weights + 1) / 2
             sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
@@ -155,8 +157,6 @@ class ImitationModule:
             return res
 
     def _sampler(self, samples, weights):
-        for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
-            target_param.data.copy_(param.data)
         projected_weights = (weights + 1) / 2
         sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
                                                  self.expert_buffer.traj_lengths)
