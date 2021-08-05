@@ -16,7 +16,11 @@ class ExpertData:
         self.observations = torch.from_numpy(observations).to(device)
         self.actions = torch.from_numpy(actions).to(device)
         self.dones = torch.from_numpy(dones).to(device)
+        self.lens = torch.from_numpy(np.diff(np.where(dones))[0]).to(device)
         self.weights = torch.ones_like(self.dones, dtype=torch.float32, device=device)
+
+        done_idx = np.where(dones)[0]
+        self.traj_lengths = torch.from_numpy(np.concatenate(([done_idx[0]+1], np.diff(done_idx)))).to(device)
 
     def sample(self, batch_size: int, env: Optional[VecNormalize] = None, weights=None):
         if weights is None:

@@ -17,6 +17,8 @@ import gym.spaces as spaces
 from src.common.utils import to_onehot
 
 from ray.rllib.evaluation.postprocessing import compute_gae_for_sample_batch
+import nevergrad as ng
+import copy
 
 
 class ImitationModule:
@@ -66,12 +68,14 @@ class ImitationModule:
         self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
         opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
+        self.g_clone = copy.deepcopy(self.g)
         if self.airl:
             self.h = self._create_fc_net((len(self.features_to_keep), self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
             self.h = self.h.to(self.device)
             opt_params += list(self.h.parameters())
 
         self.optimizer = torch.optim.Adam(opt_params, lr=self.lr)
+        self.optimizer_clone = torch.optim.Adam(list(self.g_clone.parameters()), lr=self.lr)
 
         self.mean = None
         self.var = None
@@ -96,8 +100,24 @@ class ImitationModule:
         # ESTIMATE REWARD BONUS
         reward_bonus = self._predict_reward(samples_input)
 
+        # ESTIMATE TRAJECTORY SAMPLE MINIMIZER
+        if self.dice_coef < 1:
+            for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
+                target_param.data.copy_(param.data)
+            n_traj = self.expert_buffer.dones.sum()
+            cov_sensitivity = 0.2  # number between 0 and 1. Higher means will attempt larger covariate shifts sampling
+            instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-1, upper=1))
+            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=300, num_workers=1)
+            weights = optimizer.minimize(lambda w: self._sampler_trainer(samples_input, cov_sensitivity, w)).value[0][0]
+            projected_weights = weights + 1. / cov_sensitivity
+            sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
+                                                     self.expert_buffer.traj_lengths)
+        else:
+            sample_weights = None
+
+
         # TRAIN DICE
-        self._train(samples_input)
+        self._train(samples_input, sample_weights)
 
         # UPDATE REWARD AND RECALCULATE ADVANTAGE
         rollouts = samples_batch.split_by_episode()
@@ -112,16 +132,20 @@ class ImitationModule:
         samples_batch = SampleBatch.concat_samples(rollouts)
 
         # Send back extra info for metrics
-        policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean()}
+        policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean(),
+                                       "augmented_total_reward": samples_batch[SampleBatch.REWARDS].mean()}
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples_batch
 
-
-    def _forward_model(self, obs, actions, next_obs, dones):
+    def _forward_model(self, obs, actions, next_obs, dones, use_clone=False):
+        if use_clone:
+            g = self.g_clone
+        else:
+            g = self.g
         if isinstance(self.action_space, spaces.Discrete):
             actions = to_onehot(actions.flatten(), self.action_space.n).clone()
-        rs = self.g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1)).flatten()
+        rs = g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1)).flatten()
         if self.airl:
             vs = self.h(obs).flatten()
             next_vs = self.h(next_obs).flatten()
@@ -134,24 +158,36 @@ class ImitationModule:
         else:
             return res
 
-    def _train(self, samples):
-        # if self.is_recsim:
-        #     batch_size = len(samples)
-        #     dice_epochs = 1
-        #     alpha = 0.9
-        # else:
-        batch_size = 128
-        dice_epochs = 50
+    def _sampler_trainer(self, samples, cov_sensitivity, weights):
+        weights = weights + 1. / cov_sensitivity
+        sample_weights = torch.repeat_interleave(torch.from_numpy(weights).to(self.device),
+                                                 self.expert_buffer.traj_lengths)
+        return self._train(samples, sample_weights, use_clone=True).item()
+
+    def _train(self, samples, sample_weights=None, use_clone=False):
         alpha = 0.9
 
+        if use_clone:
+            batch_size = 512
+            dice_epochs = 1
+            n_samples = 10
+            optimizer = self.optimizer_clone
+        else:
+            batch_size = 128
+            dice_epochs = 50
+            n_samples = len(samples[SampleBatch.OBS]) // batch_size
+            optimizer = self.optimizer
+
+
         for _ in range(dice_epochs):
-            for _ in range(len(samples[SampleBatch.OBS]) // batch_size):
-                expert_data = self.expert_buffer.sample(batch_size)
+            for _ in range(n_samples):
+                expert_data = self.expert_buffer.sample(batch_size, weights=sample_weights)
 
                 expert_d = self._forward_model(expert_data.observations[:, self.features_to_keep],
                                                expert_data.actions,
                                                expert_data.next_observations[:, self.features_to_keep],
-                                               expert_data.dones)
+                                               expert_data.dones,
+                                               use_clone=use_clone)
 
                 # if isinstance(self.action_space, spaces.Discrete):
                 #     policy_actions = to_onehot(policy_actions.flatten(), self.model.action_dim)
@@ -159,7 +195,8 @@ class ImitationModule:
                 policy_d = self._forward_model(torch.from_numpy(samples[SampleBatch.OBS][idx][:, self.features_to_keep]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.ACTIONS][idx]).to(self.device),
                                                torch.from_numpy(samples[SampleBatch.NEXT_OBS][idx][:, self.features_to_keep]).to(self.device),
-                                               torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device))
+                                               torch.from_numpy(samples[SampleBatch.DONES][idx]).to(self.device),
+                                               use_clone=use_clone)
 
                 if self.imitation_method == 'gail':
                     loss = -torch.log(1 - policy_d + float(1e-6)).mean() - torch.log(expert_d + float(1e-6)).mean()
@@ -172,9 +209,10 @@ class ImitationModule:
 
                 # loss = -F.logsigmoid(-policy_d).mean() - F.logsigmoid(expert_d).mean()
                 # Perform an optimizer step.
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
+        return loss
 
     def _predict_reward(self, samples):
         policy_obs = torch.from_numpy(samples[SampleBatch.OBS][:, self.features_to_keep]).to(self.device)
