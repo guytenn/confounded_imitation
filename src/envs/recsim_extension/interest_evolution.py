@@ -714,7 +714,7 @@ def clicked_watchtime_reward(responses, user_obs=None, doc_obs=None):
   reward = 0.0
   # reward = np.tanh(REWARD_MATRIX[0] @ (np.cos(REWARD_MATRIX @ user_obs / 30) * np.sin(REWARD_MATRIX @ doc_obs[0] / 30)) / 10)
   # print(reward)
-  prob = 0.003
+  prob = 0.001
   reward = (np.random.rand() < prob) * np.sum(user_obs @ doc_obs.T) / prob
   # mat = REWARD_MATRIX[0:len(user_obs), 0:len(user_obs)]
   # reward = np.sum(user_obs @ mat @ doc_obs.T) / 10
