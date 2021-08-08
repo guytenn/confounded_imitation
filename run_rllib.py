@@ -267,8 +267,6 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
                                    policy_path=policy_path, load_policy=True, coop=coop, seed=seed,
                                    extra_configs=extra_configs)
 
-
-
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
     forces = []
