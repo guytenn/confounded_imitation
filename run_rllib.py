@@ -256,10 +256,18 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
 
 
 def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix='', covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100, extra_configs={}):
-    # ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
     env = make_env(env_name, coop, extra_configs, seed=seed)
-    # test_agent, _ = load_agent(env, algo, 'gail', env_name, covariate_shift=covariate_shift, policy_path=policy_path, load_policy=True, coop=coop, seed=seed, extra_configs=extra_configs)
-    test_agent = None
+
+    if env_name == 'RecSim-v2':
+        test_agent = None
+    else:
+        extra_configs = {}
+        ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
+        test_agent, _ = load_agent(env, algo, 'gail', env_name, covariate_shift=covariate_shift,
+                                   policy_path=policy_path, load_policy=True, coop=coop, seed=seed,
+                                   extra_configs=extra_configs)
+
+
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
