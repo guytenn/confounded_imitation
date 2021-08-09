@@ -269,8 +269,8 @@ def evaluate_policy(args, extra_configs={}):
     rewards = []
     forces = []
     task_successes = []
-    lengths = np.zeros(args.n_episodes)
-    for episode in tqdm(range(args.n_episodes)):
+    lengths = np.zeros(args.eval_episodes)
+    for episode in tqdm(range(args.eval_episodes)):
         obs = env.reset()
         done = False
         reward_total = 0.0
