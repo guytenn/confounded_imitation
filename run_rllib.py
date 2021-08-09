@@ -155,6 +155,7 @@ def load_agent(env, args):
 
     if args.load_model and args.load_policy_path != '':
         if 'checkpoint' in args.load_policy_path:
+            print(f'Restoring checkpoint in {args.load_policy_path}')
             agent.restore(args.load_policy_path)
         else:
             # Find the most recent policy in the directory
