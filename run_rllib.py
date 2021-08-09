@@ -54,7 +54,11 @@ def setup_config(env, args):
         config["hiddens"] = [256, 256]
         config["train_batch_size"] = 128
 
-    config['wandb_logger'] = args.wandb_logger
+    if args.wandb:
+        config['wandb_logger'] = dict(project=args.project_name, name=args.run_name, config=args.__dict__)
+    else:
+        config['wandb_logger'] = None
+
     if env_name == 'RecSim-v2':
         airl = False
         state_dim = 10# 20  # config["recsim_embedding_size"] * 2
@@ -439,11 +443,6 @@ if __name__ == '__main__':
 
     if args.num_processes == -1:
         args.num_processes = None
-
-    if args.wandb:
-        args.wandb_logger = dict(project=args.project_name, name=args.run_name, config=args.__dict__)
-    else:
-        args.wandb_logger = None
 
     if args.train:
         checkpoint_path = train(args)
