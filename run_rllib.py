@@ -325,10 +325,11 @@ def evaluate_policy(args, extra_configs={}):
         sys.stdout.flush()
     # env.disconnect()
 
-    a = np.array(data['actions'])
-    b = np.argmax(a, axis=1)
-    h = [np.sum(b == i) for i in range(np.max(b))]
-    print(f'Action Histogram: {h}')
+    if args.env == 'RecSim-v2':
+        a = np.array(data['actions'])
+        b = np.argmax(a, axis=1)
+        h = [np.sum(b == i) for i in range(np.max(b))]
+        print(f'Action Histogram: {h}')
 
     print('\n', '-'*50, '\n')
     # print('Rewards:', rewards)
