@@ -36,6 +36,7 @@ class ImitationModule:
         self.action_space = dice_config['action_space']
         self.hidden_dim = dice_config['hidden_dim']
         self.standardize = dice_config["standardize"]
+        self.resampling_coef = dice_config['resampling_coef']
         self.airl = dice_config["airl"]
 
         self.features_to_keep = [i for i in range(self.state_dim) if i not in self.features_to_remove]
@@ -69,13 +70,16 @@ class ImitationModule:
         opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
         self.g_clone = copy.deepcopy(self.g)
+        clone_params = list(self.g_clone.parameters())
         if self.airl:
             self.h = self._create_fc_net((len(self.features_to_keep), self.hidden_dim, self.hidden_dim, 1), "relu", name="h_net")
             self.h = self.h.to(self.device)
+            self.h_clone = copy.deepcopy(self.h)
             opt_params += list(self.h.parameters())
+            clone_params += list(self.h_clone.parameters())
 
         self.optimizer = torch.optim.Adam(opt_params, lr=self.lr)
-        self.optimizer_clone = torch.optim.Adam(list(self.g_clone.parameters()), lr=self.lr)
+        self.optimizer_clone = torch.optim.Adam(clone_params, lr=self.lr)
 
         self.mean = None
         self.var = None
@@ -101,20 +105,19 @@ class ImitationModule:
         reward_bonus = self._predict_reward(samples_input)
 
         # ESTIMATE TRAJECTORY SAMPLE MINIMIZER
-        # if self.dice_coef < 1:
-        #     for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
-        #         target_param.data.copy_(param.data)
-        #     n_traj = self.expert_buffer.dones.sum()
-        #     cov_sensitivity = 0.2  # number between 0 and 1. Higher means will attempt larger covariate shifts sampling
-        #     instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-1, upper=1))
-        #     optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=300, num_workers=1)
-        #     weights = optimizer.minimize(lambda w: self._sampler_trainer(samples_input, cov_sensitivity, w)).value[0][0]
-        #     projected_weights = weights + 1. / cov_sensitivity
-        #     sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
-        #                                              self.expert_buffer.traj_lengths)
-        # else:
-        #     sample_weights = None
-        sample_weights = None
+        if self.dice_coef < 1 and self.resampling_coef > 0:
+            for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
+                target_param.data.copy_(param.data)
+            n_traj = self.expert_buffer.dones.sum()
+            cov_sensitivity = self.resampling_coef  # number between 0 and 1. Higher means will attempt larger covariate shifts sampling
+            instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-1, upper=1))
+            optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=300, num_workers=1)
+            weights = optimizer.minimize(lambda w: self._sampler_trainer(samples_input, cov_sensitivity, w)).value[0][0]
+            projected_weights = weights + 1. / cov_sensitivity
+            sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
+                                                     self.expert_buffer.traj_lengths)
+        else:
+            sample_weights = None
 
 
         # TRAIN DICE

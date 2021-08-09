@@ -132,6 +132,7 @@ def setup_config(env, args):
         config["dice_config"] = {
             "env_name": env_name,
             "imitation_method": args.imitation_method,
+            "resampling_coef": args.resampling_coef,
             "lr": 0.0001,
             "gamma": config['gamma'],
             "features_to_remove": context_features[:args.n_confounders] if args.no_context else [],
@@ -390,6 +391,8 @@ if __name__ == '__main__':
                         help='Remove context for imitation')
     parser.add_argument('--n_confounders', type=int, default=-1,
                         help='Number of confounders when no context is on (default: -1)')
+    parser.add_argument('--resampling_coef', type=float, default=0.2,
+                        help='Number between 0 and 1. Higher means will attempt larger covariate shifts sampling')
     parser.add_argument('--confounding_strength', type=float, default=10,
                         help='Interpolate between covariate shift distribution when confounding is present, number between 0 and 10')
     parser.add_argument('--covariate_shift', action='store_true', default=False,
@@ -439,6 +442,9 @@ if __name__ == '__main__':
 
     if args.dice_coef < 0 or args.dice_coef > 1:
         raise ValueError("dice_coeff must be a value in [0,1]")
+
+    if args.dice.resampling_coef < 0 or args.resampling_coef > 1:
+        raise ValueError("resampling_coef must be a value in [0,1]")
 
     if args.seed == -1:
         args.seed = np.random.randint(2 ** 30 - 1)
