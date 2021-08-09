@@ -87,13 +87,15 @@ class AssistiveEnv(gym.Env):
         self._height_scale = {'male': self.config('height_scale', 'human_male'),
                               'female': self.config('height_scale', 'human_female')}
 
+        self.default_context_sampler = self.get_default_context_sampler(self.get_default_context_params())
         if context_params is None:
-            context_params = self.get_default_context_params()
+            self.confounding_strength = 0
+        else:
+            self.confounding_strength = context_params['context_params'] / 10.
         self.context_params = context_params
         self.context_sampler = self.get_default_context_sampler(context_params)
         with open("context_params.txt", "a") as f:
             print(context_params, file=f)
-
 
         self.context = None
         self.context_vector = None
@@ -503,7 +505,10 @@ class AssistiveEnv(gym.Env):
         return context_params
 
     def sample_context(self):
-        self.context = self.context_sampler.sample()
+        if np.random.rand() >= self.confounding_strength: # select default sampler
+            self.context = self.default_context_sampler.sample()
+        else:
+            self.context = self.context_sampler.sample()
         self.context_vector = np.zeros(len(self.context_fields))
         for i, field in enumerate(self.context_fields):
             self.context_vector[i] = self.context[field][0]

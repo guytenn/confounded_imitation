@@ -1,12 +1,10 @@
 import os, sys, multiprocessing, gym, ray, shutil, argparse, importlib, glob
 from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
-# from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
 from src.rllib_extensions.imppo import PPOTrainer
 import src.rllib_extensions.imppo as ppo
-from ray.rllib.agents import sac#,ppo
+from ray.rllib.agents import sac
 from src.rllib_extensions import slateq
-from ray.tune.logger import pretty_print
 import ray.rllib.utils.exploration.curiosity
 try:
     from numpngw import write_apng
@@ -18,9 +16,7 @@ from tqdm import tqdm
 import h5py
 from pathlib import Path
 from src.data.utils import get_largest_suffix
-from src.rllib_extensions.dice import DICE
 import recsim_expert
-from src.rllib_extensions.imitation_module import ImitationModule
 
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
@@ -71,6 +67,8 @@ def setup_config(env, args):
         hidden_dim = 100
     if args.n_confounders == -1:
         n_confounders = len(context_features)
+    else:
+        n_confounders = args.n_confounders
 
     if args.covariate_shift:
         if env_name == 'RecSim-v2':
@@ -78,7 +76,7 @@ def setup_config(env, args):
                 {
                     'alpha': [10, 1.5],
                     'beta': [4, 4],
-                    'n_confounders': args.n_confounders,
+                    'n_confounders': n_confounders,
                     'confounding_strength': 1
                 }
         else:
@@ -87,6 +85,7 @@ def setup_config(env, args):
                     'sparse_reward': args.sparse,
                     'context_params': \
                         {
+                            "confounding_strength": args.confounding_strength,
                             "gender": [0.8, 0.2],
                             "mass_delta": 10,
                             "mass_std": 20,
@@ -135,7 +134,7 @@ def setup_config(env, args):
             "resampling_coef": args.resampling_coef,
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": context_features[:args.n_confounders] if args.no_context else [],
+            "features_to_remove": context_features[:n_confounders] if args.no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": hidden_dim,
             "dice_coef": args.dice_coef,
