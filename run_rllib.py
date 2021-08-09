@@ -121,7 +121,7 @@ def setup_config(env, args):
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
     if args.dice_coef > 0:
-        load_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+        load_dir = os.path.join(os.path.expanduser(f'{args.data_root_dir}/.datasets'), env_name)
         if args.data_suffix == '':
             data_suffix = get_largest_suffix(load_dir, 'data_')
         else:
@@ -416,6 +416,8 @@ if __name__ == '__main__':
                         help='Dice coefficient, between 0 and 1')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
+    parser.add_argument('--data_root_dir', default='~',
+                        help='Root directory for loading data')
     parser.add_argument('--load_policy_path', default='./trained_models/',
                         help='Path name to saved policy checkpoint (NOTE: Use this to continue training an existing policy, or to evaluate a trained policy)')
     parser.add_argument('--load-model', action='store_true', default=False,
