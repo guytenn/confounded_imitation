@@ -171,6 +171,7 @@ def load_agent(env, args):
             return agent, None
     return agent, None
 
+
 def make_env(env_name, coop=False, env_config={}, seed=1001):
     if not coop:
         if env_name == 'RecSim-v2':
@@ -254,24 +255,22 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         return filename
 
 
-def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix='', covariate_shift=False, coop=False, seed=0, verbose=False, save_data=False, min_reward_to_save=100, extra_configs={}):
-    env = make_env(env_name, coop, extra_configs, seed=seed)
+def evaluate_policy(args, extra_configs={}):
+    # env_name, algo, policy_path, n_episodes = 1001, data_suffix = '', covariate_shift = False, coop = False, seed = 0, verbose = False, save_data = False, min_reward_to_save = 100,
+    env = make_env(args.env, coop, extra_configs, seed=args.seed)
 
-    if env_name == 'RecSim-v2':
+    if args.env == 'RecSim-v2':
         test_agent = None
     else:
-        extra_configs = {}
         ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-        test_agent, _ = load_agent(env, algo, 'gail', env_name, covariate_shift=covariate_shift,
-                                   policy_path=policy_path, load_policy=True, coop=coop, seed=seed,
-                                   extra_configs=extra_configs)
+        test_agent, _ = load_agent(env, args)
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
     forces = []
     task_successes = []
-    lengths = np.zeros(n_episodes)
-    for episode in tqdm(range(n_episodes)):
+    lengths = np.zeros(args.n_episodes)
+    for episode in tqdm(range(args.n_episodes)):
         obs = env.reset()
         done = False
         reward_total = 0.0
@@ -290,14 +289,14 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
                 done = done['__all__']
                 info = info['robot']
             else:
-                if env_name == 'RecSim-v2':
+                if args.env == 'RecSim-v2':
                     action = recsim_expert.compute_action(env)
                 else:
                     action = test_agent.compute_action(obs)
                 prev_obs = obs.copy()
                 obs, reward, done, info = env.step(action)
-                if save_data:
-                    if env_name == 'RecSim-v2':
+                if args.save_data:
+                    if args.env == 'RecSim-v2':
                         doc = np.concatenate([val[np.newaxis, :] for val in obs["doc"].values()], 0)
                         # episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
                         episode_data['states'].append(prev_obs['user'])
@@ -312,14 +311,14 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
             # force_list.append(info['total_force_on_human'])
             # task_success = info['task_success']
 
-        if reward_total > min_reward_to_save:
+        if reward_total > args.min_reward_to_save:
             for key, val in episode_data.items():
                 data[key] += episode_data[key]
 
         rewards.append(reward_total)
         # forces.append(np.mean(force_list))
         # task_successes.append(task_success)
-        if verbose:
+        if args.verbose:
             # print('Reward total: %.2f, mean force: %.2f, task success: %r' % (reward_total, np.mean(force_list), task_success))
             print('Reward total: %.2f,vtask success: %r' % (reward_total, task_success))
 
@@ -348,16 +347,16 @@ def evaluate_policy(env_name, algo, policy_path, n_episodes=1001, data_suffix=''
     print('Task Length Std:', np.std(lengths))
     sys.stdout.flush()
 
-    if save_data:
+    if args.save_data:
         for key in data.keys():
             data[key] = np.array(data[key])
-        save_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
+        save_dir = os.path.join(os.path.expanduser('~/.datasets'), args.env)
         Path(save_dir).mkdir(parents=True, exist_ok=True)
-        if data_suffix == '':
+        if args.data_suffix == '':
             suffix = get_largest_suffix(save_dir, 'data_')
             file_path = os.path.join(save_dir, f'data_{suffix + 1}.h5')
         else:
-            file_path = os.path.join(save_dir, f'data_{data_suffix}.h5')
+            file_path = os.path.join(save_dir, f'data_{args.data_suffix}.h5')
         hf = h5py.File(file_path, 'w')
         for k, v in data.items():
             data_to_save = np.array(v)
@@ -449,6 +448,5 @@ if __name__ == '__main__':
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
-        evaluate_policy(args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, n_episodes=args.eval_episodes, min_reward_to_save=args.min_reward_to_save, coop=coop, seed=args.seed, verbose=args.verbose, save_data=args.save_data, data_suffix=args.data_suffix, covariate_shift=args.covariate_shift,
-                        extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
+        evaluate_policy(args, extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
 
