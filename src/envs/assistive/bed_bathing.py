@@ -7,8 +7,8 @@ from .agents.furniture import Furniture
 
 
 class BedBathingEnv(AssistiveEnv):
-    def __init__(self, robot, human, context_params=None, seed=1001):
-        super(BedBathingEnv, self).__init__(robot=robot, human=human, task='bed_bathing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), seed=seed,
+    def __init__(self, robot, human, context_params=None, sparse_reward=False, seed=1001):
+        super(BedBathingEnv, self).__init__(robot=robot, human=human, task='bed_bathing', obs_robot_len=(17 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(18 + len(human.controllable_joint_indices)), sparse_reward=sparse_reward, seed=seed,
                                             context_params=context_params,
                                             context_fields=(
                                             "velocity_weight", "force_nontarget_weight", "high_forces_weight",
@@ -30,7 +30,10 @@ class BedBathingEnv(AssistiveEnv):
         reward_action = -np.linalg.norm(action) # Penalize actions
         reward_new_contact_points = self.new_contact_points # Reward new contact points on a person
 
-        reward = self.config('distance_weight')*reward_distance + self.config('action_weight')*reward_action + self.config('wiping_reward_weight')*reward_new_contact_points + preferences_score
+        reward = self.config('distance_weight')*reward_distance * (not self.sparse_reward) + \
+                 self.config('action_weight')*reward_action + \
+                 self.config('wiping_reward_weight')*reward_new_contact_points + \
+                 preferences_score
 
         if self.gui and self.tool_force_on_human > 0:
             print('Task success:', self.task_success, 'Force at tool on human:', self.tool_force_on_human, reward_new_contact_points)

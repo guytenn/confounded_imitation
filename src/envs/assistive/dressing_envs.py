@@ -14,32 +14,32 @@ import numpy as np
 robot_arm = 'left'
 human_controllable_joint_indices = human.left_arm_joints
 class DressingPR2Env(DressingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingPR2Env, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:DressingPR2-v1', lambda config: DressingPR2Env(context_params=config['context_params'], seed=-1))
+        super(DressingPR2Env, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:DressingPR2-v1', lambda config: DressingPR2Env(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class DressingBaxterEnv(DressingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:DressingBaxter-v1', lambda config: DressingBaxterEnv(context_params=config['context_params'], seed=-1))
+        super(DressingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:DressingBaxter-v1', lambda config: DressingBaxterEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class DressingSawyerEnv(DressingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:DressingSawyer-v1', lambda config: DressingSawyerEnv(context_params=config['context_params'], seed=-1))
+        super(DressingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:DressingSawyer-v1', lambda config: DressingSawyerEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class DressingJacoEnv(DressingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(DressingJacoEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:DressingJaco-v1', lambda config: DressingJacoEnv(context_params=config['context_params'], seed=-1))
+        super(DressingJacoEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:DressingJaco-v1', lambda config: DressingJacoEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class DressingStretchEnv(DressingEnv):
     def __init__(self):

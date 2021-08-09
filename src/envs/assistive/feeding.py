@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 
 class FeedingEnv(AssistiveEnv):
-    def __init__(self, robot, human, context_params=None, seed=1001):
-        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed,
+    def __init__(self, robot, human, context_params=None, sparse_reward=False, seed=1001):
+        super(FeedingEnv, self).__init__(robot=robot, human=human, task='feeding', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), sparse_reward=sparse_reward, seed=seed,
                                          context_params=context_params,
                                          context_fields=("velocity_weight", "force_nontarget_weight", "high_forces_weight", "food_hit_weight", "food_velocities_weight", "high_pressures_weight", "impairment", "gender", "mass", "radius_scale", "height_scale"))
 
@@ -31,7 +31,10 @@ class FeedingEnv(AssistiveEnv):
         reward_distance_mouth_target = -np.linalg.norm(self.target_pos - spoon_pos) # Penalize robot for distance between the spoon and human mouth.
         reward_action = -np.linalg.norm(action) # Penalize actions
 
-        reward = self.config('distance_weight')*reward_distance_mouth_target + self.config('action_weight')*reward_action + self.config('food_reward_weight')*reward_food + preferences_score
+        reward = self.config('distance_weight')*reward_distance_mouth_target * (not self.sparse_reward) + \
+                 self.config('action_weight')*reward_action + \
+                 self.config('food_reward_weight')*reward_food + \
+                 preferences_score
         # print(self.config('distance_weight')*reward_distance_mouth_target, self.config('action_weight')*reward_action, self.config('food_reward_weight')*reward_food, preferences_score)
 
         if self.gui and reward_food != 0:

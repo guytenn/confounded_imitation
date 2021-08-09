@@ -4,8 +4,8 @@ import pybullet as p
 from .env import AssistiveEnv
 
 class DrinkingEnv(AssistiveEnv):
-    def __init__(self, robot, human, context_params=None, seed=1001):
-        super(DrinkingEnv, self).__init__(robot=robot, human=human, task='drinking', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), seed=seed,
+    def __init__(self, robot, human, context_params=None, sparse_reward=False, seed=1001):
+        super(DrinkingEnv, self).__init__(robot=robot, human=human, task='drinking', obs_robot_len=(18 + len(robot.controllable_joint_indices) - (len(robot.wheel_joint_indices) if robot.mobile else 0)), obs_human_len=(19 + len(human.controllable_joint_indices)), sparse_reward=sparse_reward, seed=seed,
                                           context_params=context_params,
                                           context_fields=(
                                           "velocity_weight", "force_nontarget_weight", "high_forces_weight",
@@ -35,7 +35,11 @@ class DrinkingEnv(AssistiveEnv):
         cup_euler = self.get_euler(cup_orient)
         reward_tilt = -abs(cup_euler[0] - np.pi/2)
 
-        reward = self.config('distance_weight')*reward_distance_mouth_target + self.config('action_weight')*reward_action + self.config('cup_tilt_weight')*reward_tilt + self.config('drinking_reward_weight')*reward_water + preferences_score
+        reward = self.config('distance_weight')*reward_distance_mouth_target * (not self.sparse_reward) + \
+                 self.config('action_weight')*reward_action + \
+                 self.config('cup_tilt_weight')*reward_tilt + \
+                 self.config('drinking_reward_weight')*reward_water + \
+                 preferences_score
 
         if self.gui and reward_water != 0:
             print('Task success:', self.task_success, 'Water reward:', reward_water)

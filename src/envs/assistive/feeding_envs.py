@@ -16,32 +16,32 @@ import numpy as np
 robot_arm = 'right'
 human_controllable_joint_indices = human.head_joints
 class FeedingPR2Env(FeedingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(FeedingPR2Env, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:FeedingPR2-v1', lambda config: FeedingPR2Env(context_params=config['context_params'], seed=-1))
+        super(FeedingPR2Env, self).__init__(robot=PR2(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:FeedingPR2-v1', lambda config: FeedingPR2Env(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class FeedingBaxterEnv(FeedingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(FeedingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:FeedingBaxter-v1', lambda config: FeedingBaxterEnv(context_params=config['context_params'], seed=-1))
+        super(FeedingBaxterEnv, self).__init__(robot=Baxter(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:FeedingBaxter-v1', lambda config: FeedingBaxterEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class FeedingSawyerEnv(FeedingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(FeedingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:FeedingSawyer-v1', lambda config: FeedingSawyerEnv(context_params=config['context_params'], seed=-1))
+        super(FeedingSawyerEnv, self).__init__(robot=Sawyer(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:FeedingSawyer-v1', lambda config: FeedingSawyerEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class FeedingJacoEnv(FeedingEnv):
-    def __init__(self, context_params=None, seed=-1):
+    def __init__(self, sparse_reward=False, context_params=None, seed=-1):
         if seed == -1:
             seed = np.random.randint(2 ** 30 - 1)
-        super(FeedingJacoEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, seed=seed)
-register_env('confounded_imitation:FeedingJaco-v1', lambda config: FeedingJacoEnv(context_params=config['context_params'], seed=-1))
+        super(FeedingJacoEnv, self).__init__(robot=Jaco(robot_arm), human=Human(human_controllable_joint_indices, controllable=False), context_params=context_params, sparse_reward=sparse_reward, seed=seed)
+register_env('confounded_imitation:FeedingJaco-v1', lambda config: FeedingJacoEnv(sparse_reward=config['sparse_reward'], context_params=config['context_params'], seed=-1))
 
 class FeedingStretchEnv(FeedingEnv):
     def __init__(self, seed=1001):

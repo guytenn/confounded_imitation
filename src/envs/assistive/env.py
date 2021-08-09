@@ -22,7 +22,7 @@ from src.envs.context import Context, Multinomial, GaussianDist, UniformDist, Fi
 
 
 class AssistiveEnv(gym.Env):
-    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, context_fields=None, context_params=None, seed=1001):
+    def __init__(self, robot=None, human=None, task='', obs_robot_len=0, obs_human_len=0, time_step=0.02, frame_skip=5, render=False, gravity=-9.81, context_fields=None, context_params=None, sparse_reward=False, seed=1001):
         self.task = task
         self.time_step = time_step
         self.frame_skip = frame_skip
@@ -31,6 +31,7 @@ class AssistiveEnv(gym.Env):
         self.gui = False
         self.gpu = False
         self.view_matrix = None
+        self.sparse_reward = sparse_reward
         self.seed(seed)
         if render:
             self.render()

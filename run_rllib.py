@@ -25,20 +25,23 @@ from src.rllib_extensions.imitation_module import ImitationModule
 trainer_selector = dict(ppo=PPOTrainer, sac=sac.SACTrainer, slateq=slateq.SlateQTrainer)
 
 
-def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
+def setup_config(env, args):
     env_name = 'RecSim-v2' if env.spec is None else env.spec.id
 
-    if num_processes is None:
+    if args.num_processes is None:
         num_processes = multiprocessing.cpu_count()
+    else:
+        num_processes = args.num_processes
+
     config = dict()
-    if algo == 'ppo':
+    if args.algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
         config['train_batch_size'] = 19200
         config['num_sgd_iter'] = 50
         config['sgd_minibatch_size'] = 128
         config['lambda'] = 0.95
         config['model']['fcnet_hiddens'] = [100, 100]
-    elif algo == 'sac':
+    elif args.algo == 'sac':
         # NOTE: pip3 install tensorflow_probability
         config = sac.DEFAULT_CONFIG.copy()
         config['timesteps_per_iteration'] = 400
@@ -46,12 +49,12 @@ def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix=''
         config['Q_model']['fcnet_hiddens'] = [100, 100]
         config['policy_model']['fcnet_hiddens'] = [100, 100]
         # config['normalize_actions'] = False
-    elif algo == 'slateq':
+    elif args.algo == 'slateq':
         config = slateq.DEFAULT_CONFIG.copy()
         config["hiddens"] = [256, 256]
         config["train_batch_size"] = 128
 
-    config['wandb_logger'] = wandb_logger
+    config['wandb_logger'] = args.wandb_logger
     if env_name == 'RecSim-v2':
         airl = False
         state_dim = 10# 20  # config["recsim_embedding_size"] * 2
@@ -62,21 +65,22 @@ def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix=''
         airl = True
         context_features = env.unwrapped.context_features
         hidden_dim = 100
-    if n_confounders == -1:
+    if args.n_confounders == -1:
         n_confounders = len(context_features)
 
-    if covariate_shift:
+    if args.covariate_shift:
         if env_name == 'RecSim-v2':
             config['env_config'] = \
                 {
                     'alpha': [10, 1.5],
                     'beta': [4, 4],
-                    'n_confounders': n_confounders,
+                    'n_confounders': args.n_confounders,
                     'confounding_strength': 1
                 }
         else:
             config['env_config'] = \
                 {
+                    'sparse_reward': args.sparse,
                     'context_params': \
                         {
                             "gender": [0.8, 0.2],
@@ -106,28 +110,30 @@ def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix=''
                     'confounding_strength': 0
                 }
         else:
-            config['env_config'] = {'context_params': None}
+            config['env_config'] = {'sparse_reward': args.sparse, 'context_params': None}
     config['num_workers'] = num_processes
     config['num_cpus_per_worker'] = 0
-    config['seed'] = seed
+    config['seed'] = args.seed
     config['log_level'] = 'ERROR'
     config['framework'] = 'torch'
-    if dice_coef > 0:
+    if args.dice_coef > 0:
         load_dir = os.path.join(os.path.expanduser('~/.datasets'), env_name)
-        if data_suffix == '':
+        if args.data_suffix == '':
             data_suffix = get_largest_suffix(load_dir, 'data_')
+        else:
+            data_suffix = args.data_suffix
         expert_data_path = os.path.join(load_dir, f'data_{data_suffix}.h5')
 
 
         config["dice_config"] = {
             "env_name": env_name,
-            "imitation_method": imitation_method,
+            "imitation_method": args.imitation_method,
             "lr": 0.0001,
             "gamma": config['gamma'],
-            "features_to_remove": context_features[:n_confounders] if no_context else [],
+            "features_to_remove": context_features[:args.n_confounders] if args.no_context else [],
             "expert_path": expert_data_path,
             "hidden_dim": hidden_dim,
-            "dice_coef": dice_coef,
+            "dice_coef": args.dice_coef,
             "observation_space": env.observation_space,
             "action_space": env.action_space,
             "state_dim": state_dim,
@@ -135,31 +141,24 @@ def setup_config(env, algo, imitation_method='gail', dice_coef=0, data_suffix=''
             "airl": airl,
             }
 
-    # if algo == 'sac':
-    #     config['num_workers'] = 1
-    if coop:
-        obs = env.reset()
-        policies = {'robot': (None, env.observation_space_robot, env.action_space_robot, {}), 'human': (None, env.observation_space_human, env.action_space_human, {})}
-        config['multiagent'] = {'policies': policies, 'policy_mapping_fn': lambda a: a}
-        config['env_config'] = {'num_agents': 2}
-    return {**config, **extra_configs}
+    return config
 
 
-def load_agent(env, algo, imitation_method, env_name, policy_path='', load_policy=False, dice_coef=0, data_suffix='', no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, coop=False, seed=0, extra_configs={}):
-    if env_name != "RecSim-v2":
-        rllib_env_name = 'confounded_imitation:'+env_name
+def load_agent(env, args):
+    if args.env != "RecSim-v2":
+        rllib_env_name = 'confounded_imitation:'+args.env
     else:
-        rllib_env_name = env_name
+        rllib_env_name = args.env
 
-    config = setup_config(env, algo, imitation_method, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
-    agent = trainer_selector[algo](config, rllib_env_name)
+    config = setup_config(env, args)
+    agent = trainer_selector[args.algo](config, rllib_env_name)
 
-    if load_policy and policy_path != '':
-        if 'checkpoint' in policy_path:
-            agent.restore(policy_path)
+    if args.load_model and args.load_policy_path != '':
+        if 'checkpoint' in args.load_policy_path:
+            agent.restore(args.load_policy_path)
         else:
             # Find the most recent policy in the directory
-            directory = os.path.join(policy_path, algo, env_name)
+            directory = os.path.join(args.load_policy_path, args.algo, args.env)
             files = [f.split('_')[-1] for f in glob.glob(os.path.join(directory, 'checkpoint_*'))]
             files_ints = [int(f) for f in files]
             if files:
@@ -186,19 +185,19 @@ def make_env(env_name, coop=False, env_config={}, seed=1001):
     return env
 
 
-def train(env_name, algo, timesteps_total=1000000, imitation_method='gail', save_dir='./trained_models/', load_policy_path='', load_policy=False, dice_coef=0, data_suffix='', coop=False, load=False, no_context=False, n_confounders=-1, covariate_shift=False, num_processes=None, wandb_logger=None, seed=0, extra_configs={}):
+def train(args):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-    if env_name == 'RecSim-v2':
+    if args.env == 'RecSim-v2':
         # env = None
         env = make_recsim_env({})
     else:
-        env = make_env(env_name, coop)
-    agent, checkpoint_path = load_agent(env, algo, imitation_method, env_name, load_policy_path, load_policy, dice_coef, data_suffix, no_context, n_confounders, covariate_shift, num_processes, wandb_logger, coop, seed, extra_configs)
-    if env_name != 'RecSim-v2':
+        env = make_env(args.env, coop)
+    agent, checkpoint_path = load_agent(env, args)
+    if args.env != 'RecSim-v2':
         env.disconnect()
 
     timesteps = 0
-    while timesteps < timesteps_total:
+    while timesteps < args.train_timesteps:
         result = agent.train()
         timesteps = result['timesteps_total']
         if coop:
@@ -213,7 +212,7 @@ def train(env_name, algo, timesteps_total=1000000, imitation_method='gail', save
         if checkpoint_path is not None:
             shutil.rmtree(os.path.dirname(checkpoint_path), ignore_errors=True)
         # Save the recently trained policy
-        checkpoint_path = agent.save(os.path.join(save_dir, algo, env_name))
+        checkpoint_path = agent.save(os.path.join(args.save_dir, args.algo, args.env))
     return checkpoint_path
 
 
@@ -223,7 +222,7 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
         env = make_env(env_name, coop, seed=seed)
         if colab:
             env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_agent(env, algo, 'gail', env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
+    test_agent, _ = load_agent(env, args, env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
 
     if not colab:
         env.render()
@@ -390,6 +389,8 @@ if __name__ == '__main__':
                         help='Interpolate between covariate shift distribution when confounding is present, number between 0 and 10')
     parser.add_argument('--covariate_shift', action='store_true', default=False,
                         help='Add covariate shift to environment')
+    parser.add_argument('--sparse', action='store_true', default=False,
+                        help='Use sparse reward signal')
     parser.add_argument('--num-processes', type=int, default=-1,
                         help='Number of workers during training (default = -1, use all cpus)')
     parser.add_argument('--load', action='store_true', default=False,
@@ -439,13 +440,12 @@ if __name__ == '__main__':
         args.num_processes = None
 
     if args.wandb:
-        wandb_logger = dict(project=args.project_name, name=args.run_name, config=args.__dict__)
+        args.wandb_logger = dict(project=args.project_name, name=args.run_name, config=args.__dict__)
     else:
-        wandb_logger = None
-
+        args.wandb_logger = None
 
     if args.train:
-        checkpoint_path = train(args.env, args.algo, timesteps_total=args.train_timesteps, imitation_method=args.imitation_method, save_dir=args.save_dir, load_policy_path=args.load_policy_path, load_policy=args.load_model, dice_coef=args.dice_coef, data_suffix=args.data_suffix, coop=coop, load=args.load, seed=args.seed, no_context=args.no_context, n_confounders=args.n_confounders, covariate_shift=args.covariate_shift, num_processes=args.num_processes, wandb_logger=wandb_logger)
+        checkpoint_path = train(args)
     if args.render:
         render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
     if args.evaluate or args.save_data:
