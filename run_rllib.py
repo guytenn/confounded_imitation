@@ -366,7 +366,7 @@ def evaluate_policy(args, extra_configs={}):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RL for Assistive Gym')
-    parser.add_argument('--env', default='FeedingGeneral-v1',
+    parser.add_argument('--env', default='FeedingSawyer-v1',
                         help='Environment to train on (default: FeedingSawyer-v1)')
     parser.add_argument('--algo', default='ppo', choices=['ppo', 'sac', 'slateq'],
                         help='Reinforcement learning algorithm')
