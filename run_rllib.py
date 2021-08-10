@@ -442,7 +442,7 @@ if __name__ == '__main__':
     if args.dice_coef < 0 or args.dice_coef > 1:
         raise ValueError("dice_coeff must be a value in [0,1]")
 
-    if args.dice.resampling_coef < 0 or args.resampling_coef > 1:
+    if args.resampling_coef < 0 or args.resampling_coef > 1:
         raise ValueError("resampling_coef must be a value in [0,1]")
 
     if args.seed == -1:

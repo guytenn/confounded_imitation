@@ -145,14 +145,17 @@ class ImitationModule:
     def _forward_model(self, obs, actions, next_obs, dones, use_clone=False):
         if use_clone:
             g = self.g_clone
+            h = self.h_clone
         else:
             g = self.g
+            h = self.h
         if isinstance(self.action_space, spaces.Discrete):
             actions = to_onehot(actions.flatten(), self.action_space.n).clone()
+
         rs = g(torch.cat((obs, dones.unsqueeze(-1).float(), actions), dim=1)).flatten()
         if self.airl:
-            vs = self.h(obs).flatten()
-            next_vs = self.h(next_obs).flatten()
+            vs = h(obs).flatten()
+            next_vs = h(next_obs).flatten()
             res = rs + self.gamma * (1 - dones.float()) * next_vs - vs
         else:
             res = rs
