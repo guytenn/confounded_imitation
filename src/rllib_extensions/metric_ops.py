@@ -11,6 +11,7 @@ from ray.rllib.evaluation.worker_set import WorkerSet
 from ray.rllib.execution.metric_ops import OncePerTimeInterval, OncePerTimestepsElapsed
 import numpy as np
 import wandb
+import time
 
 
 def StandardMetricsReporting(
@@ -80,8 +81,12 @@ class CollectMetrics:
             self.wandb_logger = wandb.init(**wandb_config)
         else:
             self.wandb_logger = None
+        self.time_stamp = time.time()
 
     def __call__(self, _: Any) -> Dict:
+        new_time = time.time()
+        time_diff = new_time - self.time_stamp
+        self.time_stamp = new_time
         # Collect worker metrics.
         episodes, self.to_be_collected = collect_episodes(
             self.workers.local_worker(),
@@ -132,12 +137,12 @@ class CollectMetrics:
                         'reward_std': np.std(res['hist_stats']['episode_reward']),
                         'policy_loss_mean': policy._mean_policy_loss.item(),
                         'vf_loss_mean': policy._mean_vf_loss.item(),
-                        'total_loss': policy._total_loss.item()
+                        'total_loss': policy._total_loss.item(),
+                        'FPS': policy.config['train_batch_size'] / time_diff,
                         }
             if 'extra_info' in policy.config:
                 log_dict.update(policy.config['extra_info'])
 
-            self.wandb_logger.log(log_dict,
-                                  step=res['timesteps_total'])
+            self.wandb_logger.log(log_dict, step=res['timesteps_total'])
 
         return res
