@@ -7,7 +7,12 @@ from collections import OrderedDict
 
 class PlotUtils:
     @classmethod
-    def plot_rewards(cls, json_path: str, title: str, max_steps: int=None, smoothing: float=10, legend_dict: OrderedDict=None):
+    def plot_rewards(cls, json_path: str,
+                     title: str,
+                     max_steps: int = None,
+                     smoothing: float = 10,
+                     legend_dict: OrderedDict = None,
+                     save_to_file: bool = False):
         fig = plt.figure()
         axes = fig.add_subplot(111)
 
@@ -44,10 +49,15 @@ class PlotUtils:
             axes.legend(ordered_handles, ordered_labels, ncol=2, loc='lower center')
         else:
             axes.legend()
-        plt.show()
+
+        if save_to_file:
+            plt.savefig(f"data/{data['project']}.png")
+        else:
+            plt.show()
 
 
 if __name__ == '__main__':
     PlotUtils.plot_rewards('data/recsim-confounding-chi.json',
                            title='RecSim Confounding Effect',
-                           legend_dict=OrderedDict({f'cov_shift_{i}': f'Shift Strength: {float(i / 10):g}' for i in range(0, 11, 2)}))
+                           legend_dict=OrderedDict({f'cov_shift_{i}': f'Shift Strength: {float(i / 10):g}' for i in range(0, 11, 2)}),
+                           save_to_file=True)
