@@ -1,6 +1,4 @@
 from typing import Any, List, Dict
-import time
-
 from ray.actor import ActorHandle
 from ray.util.iter import LocalIterator
 from ray.rllib.evaluation.metrics import collect_episodes, summarize_episodes
@@ -12,6 +10,9 @@ from ray.rllib.execution.metric_ops import OncePerTimeInterval, OncePerTimesteps
 import numpy as np
 import wandb
 import time
+import json
+from pathlib import Path
+import os
 
 
 def StandardMetricsReporting(
@@ -79,9 +80,13 @@ class CollectMetrics:
         self.selected_workers = selected_workers
         if wandb_config is not None:
             self.wandb_logger = wandb.init(**wandb_config)
+            self.save_path = os.path.join('data/', f"{self.wandb_logger.config._items['run_name']}_{self.wandb_logger.config._items['seed']}.json")
+            Path(self.save_path).mkdir(parents=True, exist_ok=True)
         else:
             self.wandb_logger = None
         self.time_stamp = time.time()
+        self.steps = []
+        self.rewards = []
 
     def __call__(self, _: Any) -> Dict:
         new_time = time.time()
@@ -144,5 +149,11 @@ class CollectMetrics:
                 log_dict.update(policy.config['extra_info'])
 
             self.wandb_logger.log(log_dict, step=res['timesteps_total'])
+
+            self.steps.append(res['timesteps_total'])
+            self.rewards.append(res['episode_reward_mean'])
+            data = dict(config=self.wandb_logger.config._items, rewards=self.rewards, steps=self.steps)
+            with open(self.save_path, 'w') as fp:
+                json.dump(data, fp)
 
         return res
