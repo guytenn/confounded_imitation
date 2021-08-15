@@ -80,8 +80,9 @@ class CollectMetrics:
         self.selected_workers = selected_workers
         if wandb_config is not None:
             self.wandb_logger = wandb.init(**wandb_config)
-            self.save_path = os.path.join('data/', f"{self.wandb_logger.config._items['run_name']}_{self.wandb_logger.config._items['seed']}.json")
-            Path(self.save_path).mkdir(parents=True, exist_ok=True)
+            root_path = 'data/'
+            self.save_path = os.path.join(root_path, f"{self.wandb_logger.config._items['run_name']}_{self.wandb_logger.config._items['seed']}.json")
+            Path(root_path).mkdir(parents=True, exist_ok=True)
         else:
             self.wandb_logger = None
         self.time_stamp = time.time()
