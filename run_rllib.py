@@ -115,6 +115,7 @@ def setup_config(env, args):
         else:
             config['env_config'] = {'sparse_reward': args.sparse, 'context_params': None}
     config['num_workers'] = num_processes
+    config['num_gpus_per_worker'] = 1
     config['num_cpus_per_worker'] = 0
     config['seed'] = args.seed
     config['log_level'] = 'ERROR'
