@@ -134,7 +134,7 @@ def setup_mixins(policy: Policy, obs_space: gym.spaces.Space,
 
 A3CTFPolicy = build_tf_policy(
     name="A3CTFPolicy",
-    get_default_config=lambda: src.rllib.agents.a3c.a3c.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.a3c.a3c.DEFAULT_CONFIG,
     loss_fn=actor_critic_loss,
     stats_fn=stats,
     grad_stats_fn=grad_stats,

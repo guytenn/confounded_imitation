@@ -687,7 +687,7 @@ def validate_spaces(policy: Policy, observation_space: gym.spaces.Space,
 # above.
 SACTFPolicy = build_tf_policy(
     name="SACTFPolicy",
-    get_default_config=lambda: src.rllib.agents.sac.sac.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.sac.sac.DEFAULT_CONFIG,
     make_model=build_sac_model,
     postprocess_fn=postprocess_trajectory,
     action_distribution_fn=get_distribution_inputs_and_class,

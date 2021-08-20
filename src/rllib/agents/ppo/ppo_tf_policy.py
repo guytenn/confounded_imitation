@@ -367,7 +367,7 @@ def postprocess_ppo_gae(
 PPOTFPolicy = build_tf_policy(
     name="PPOTFPolicy",
     loss_fn=ppo_surrogate_loss,
-    get_default_config=lambda: src.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     postprocess_fn=compute_gae_for_sample_batch,
     stats_fn=kl_and_loss_stats,
     compute_gradients_fn=compute_and_clip_gradients,

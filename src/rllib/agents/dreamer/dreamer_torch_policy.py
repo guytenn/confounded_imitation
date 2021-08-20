@@ -279,7 +279,7 @@ def preprocess_episode(
 DreamerTorchPolicy = build_policy_class(
     name="DreamerTorchPolicy",
     framework="torch",
-    get_default_config=lambda: src.rllib.agents.dreamer.dreamer.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.dreamer.dreamer.DEFAULT_CONFIG,
     action_sampler_fn=action_sampler_fn,
     postprocess_fn=preprocess_episode,
     loss_fn=dreamer_loss,

@@ -252,7 +252,7 @@ def setup_mixins(policy: Policy, obs_space: gym.spaces.Space,
 PPOTorchPolicy = build_policy_class(
     name="PPOTorchPolicy",
     framework="torch",
-    get_default_config=lambda: src.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     loss_fn=ppo_surrogate_loss,
     stats_fn=kl_and_loss_stats,
     extra_action_out_fn=vf_preds_fetches,

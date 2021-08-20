@@ -115,7 +115,7 @@ def setup_mixins(policy: Policy, obs_space: gym.spaces.Space,
 A3CTorchPolicy = build_policy_class(
     name="A3CTorchPolicy",
     framework="torch",
-    get_default_config=lambda: src.rllib.agents.a3c.a3c.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.a3c.a3c.DEFAULT_CONFIG,
     loss_fn=actor_critic_loss,
     stats_fn=loss_and_entropy_stats,
     postprocess_fn=compute_gae_for_sample_batch,

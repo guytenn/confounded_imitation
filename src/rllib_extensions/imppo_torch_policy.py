@@ -6,6 +6,7 @@ import logging
 from typing import Dict, List, Type, Union
 
 import ray
+import src
 from src.rllib.agents.ppo.ppo_tf_policy import setup_config
 from src.rllib.evaluation.postprocessing import compute_gae_for_sample_batch, \
     Postprocessing

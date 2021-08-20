@@ -280,7 +280,7 @@ def setup_mixins(policy, obs_space, action_space, config):
 
 VTraceTFPolicy = build_tf_policy(
     name="VTraceTFPolicy",
-    get_default_config=lambda: src.rllib.agents.impala.impala.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.impala.impala.DEFAULT_CONFIG,
     loss_fn=build_vtrace_loss,
     stats_fn=stats,
     grad_stats_fn=grad_stats,

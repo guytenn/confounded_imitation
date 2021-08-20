@@ -405,7 +405,7 @@ def postprocess_fn_add_next_actions_for_sarsa(policy: Policy,
 SlateQTorchPolicy = build_policy_class(
     name="SlateQTorchPolicy",
     framework="torch",
-    get_default_config=lambda: src.rllib.agents.slateq.slateq.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.slateq.slateq.DEFAULT_CONFIG,
 
     # build model, loss functions, and optimizers
     make_model_and_action_dist=build_slateq_model_and_distribution,

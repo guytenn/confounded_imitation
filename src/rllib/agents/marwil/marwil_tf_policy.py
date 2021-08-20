@@ -193,7 +193,7 @@ def setup_mixins(policy: Policy, obs_space: gym.spaces.Space,
 
 MARWILTFPolicy = build_tf_policy(
     name="MARWILTFPolicy",
-    get_default_config=lambda: src.rllib.agents.marwil.marwil.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.marwil.marwil.DEFAULT_CONFIG,
     loss_fn=marwil_loss,
     stats_fn=stats,
     postprocess_fn=postprocess_advantages,

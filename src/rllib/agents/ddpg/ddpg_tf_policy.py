@@ -446,7 +446,7 @@ def validate_spaces(pid: PolicyID, observation_space: gym.spaces.Space,
 
 DDPGTFPolicy = build_tf_policy(
     name="DDPGTFPolicy",
-    get_default_config=lambda: src.rllib.agents.ddpg.ddpg.DEFAULT_CONFIG,
+    get_default_config=lambda: ray.rllib.agents.ddpg.ddpg.DEFAULT_CONFIG,
     make_model=build_ddpg_models,
     action_distribution_fn=get_distribution_inputs_and_class,
     loss_fn=ddpg_actor_critic_loss,
