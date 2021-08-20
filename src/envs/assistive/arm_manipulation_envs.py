@@ -7,7 +7,7 @@ from .agents.jaco import Jaco
 from .agents.stretch import Stretch
 from .agents.panda import Panda
 from .agents.human import Human
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from src.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
 
 robot_arm = 'both'

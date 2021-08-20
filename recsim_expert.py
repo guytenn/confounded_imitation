@@ -1,4 +1,4 @@
-from ray.rllib.env.wrappers.recsim_wrapper import make_recsim_env
+from src.rllib.env.wrappers.recsim_wrapper import make_recsim_env
 import numpy as np
 from tqdm import tqdm
 from src.envs.recsim_extension.interest_evolution import REWARD_MATRIX

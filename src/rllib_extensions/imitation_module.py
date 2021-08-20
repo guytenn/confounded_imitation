@@ -1,6 +1,6 @@
-from ray.rllib.models.torch.misc import SlimFC
-from ray.rllib.utils.framework import try_import_torch
-from ray.rllib.policy.sample_batch import SampleBatch
+from src.rllib.models.torch.misc import SlimFC
+from src.rllib.utils.framework import try_import_torch
+from src.rllib.policy.sample_batch import SampleBatch
 torch, nn = try_import_torch()
 F = None
 if nn is not None:
@@ -16,7 +16,7 @@ from src.rllib_extensions.recsim_wrapper import restore_samples
 import gym.spaces as spaces
 from src.common.utils import to_onehot
 
-from ray.rllib.evaluation.postprocessing import compute_gae_for_sample_batch
+from src.rllib.evaluation.postprocessing import compute_gae_for_sample_batch
 import nevergrad as ng
 import copy
 

@@ -16,18 +16,18 @@ import logging
 from typing import List, Type
 
 from src.rllib_extensions.slateq_policy import SlateQTorchPolicy
-from ray.rllib.agents.trainer import with_common_config
-from ray.rllib.agents.trainer_template import build_trainer
-from ray.rllib.evaluation.worker_set import WorkerSet
-from ray.rllib.examples.policy.random_policy import RandomPolicy
-from ray.rllib.execution.concurrency_ops import Concurrently
-from ray.rllib.execution.metric_ops import StandardMetricsReporting
-from ray.rllib.execution.replay_buffer import LocalReplayBuffer
-from ray.rllib.execution.replay_ops import Replay, StoreToReplayBuffer
-from ray.rllib.execution.rollout_ops import ParallelRollouts
-from ray.rllib.execution.train_ops import TrainOneStep
-from ray.rllib.policy.policy import Policy
-from ray.rllib.utils.typing import TrainerConfigDict
+from src.rllib.agents.trainer import with_common_config
+from src.rllib.agents.trainer_template import build_trainer
+from src.rllib.evaluation.worker_set import WorkerSet
+from src.rllib.examples.policy.random_policy import RandomPolicy
+from src.rllib.execution.concurrency_ops import Concurrently
+from src.rllib.execution.metric_ops import StandardMetricsReporting
+from src.rllib.execution.replay_buffer import LocalReplayBuffer
+from src.rllib.execution.replay_ops import Replay, StoreToReplayBuffer
+from src.rllib.execution.rollout_ops import ParallelRollouts
+from src.rllib.execution.train_ops import TrainOneStep
+from src.rllib.policy.policy import Policy
+from src.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
 from src.rllib_extensions.imitation_module import ImitationModule

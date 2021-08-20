@@ -3,9 +3,10 @@ from src.rllib_extensions.recsim_wrapper import make_recsim_env
 import numpy as np
 from src.rllib_extensions.imppo import PPOTrainer
 import src.rllib_extensions.imppo as ppo
-from ray.rllib.agents import sac
+from src.rllib.agents import sac
 from src.rllib_extensions import slateq
-import ray.rllib.utils.exploration.curiosity
+import src.rllib.utils.exploration.curiosity
+
 try:
     from numpngw import write_apng
 except:

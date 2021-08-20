@@ -11,13 +11,13 @@ import numpy as np
 from src.envs.recsim_extension import interest_evolution
 from typing import List
 
-from ray.rllib.utils.error import UnsupportedSpaceException
+from src.rllib.utils.error import UnsupportedSpaceException
 from ray.tune.registry import register_env
 
-from ray.rllib.utils.framework import try_import_torch
-from ray.rllib.policy.sample_batch import SampleBatch
+from src.rllib.utils.framework import try_import_torch
+from src.rllib.policy.sample_batch import SampleBatch
 torch, nn = try_import_torch()
-from ray.rllib.models.modelv2 import restore_original_dimensions
+from src.rllib.models.modelv2 import restore_original_dimensions
 
 
 class RecSimObservationSpaceWrapper(gym.ObservationWrapper):
