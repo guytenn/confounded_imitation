@@ -120,7 +120,7 @@ def setup_config(env, args):
     # num_gpus = 0.0001  # Driver GPU
     # num_gpus_per_worker = (gpu_count - num_gpus) / num_processes
     # config['num_gpus_per_worker'] = num_gpus_per_worker
-    config['num_gpus'] = 1
+    config['num_gpus'] = 0
     config['num_cpus_per_worker'] = 0
     config['seed'] = args.seed
     config['log_level'] = 'ERROR'
