@@ -9,7 +9,7 @@ from .agents.stretch import Stretch
 from .agents.panda import Panda
 from .agents.human import Human
 from .agents.human_mesh import HumanMesh
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from src.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
 import numpy as np
 

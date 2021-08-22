@@ -12,17 +12,17 @@ Detailed documentation: https://docs.ray.io/en/master/rllib-algorithms.html#ppo
 import logging
 from typing import Optional, Type
 
-from ray.rllib.agents import with_common_config
-from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
-from ray.rllib.agents.trainer_template import build_trainer
-from ray.rllib.evaluation.worker_set import WorkerSet
-from ray.rllib.execution.rollout_ops import ParallelRollouts, ConcatBatches, \
+from src.rllib.agents import with_common_config
+from src.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
+from src.rllib.agents.trainer_template import build_trainer
+from src.rllib.evaluation.worker_set import WorkerSet
+from src.rllib.execution.rollout_ops import ParallelRollouts, ConcatBatches, \
     StandardizeFields, SelectExperiences
-from ray.rllib.execution.train_ops import TrainOneStep, TrainTFMultiGPU
-from ray.rllib.policy.policy import LEARNER_STATS_KEY, Policy
-from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
-from ray.rllib.utils.deprecation import DEPRECATED_VALUE
-from ray.rllib.utils.typing import TrainerConfigDict
+from src.rllib.execution.train_ops import TrainOneStep, TrainTFMultiGPU
+from src.rllib.policy.policy import LEARNER_STATS_KEY, Policy
+from src.rllib.policy.sample_batch import DEFAULT_POLICY_ID
+from src.rllib.utils.deprecation import DEPRECATED_VALUE
+from src.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
 from src.rllib_extensions.imitation_module import ImitationModule

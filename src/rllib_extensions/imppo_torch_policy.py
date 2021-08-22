@@ -6,20 +6,21 @@ import logging
 from typing import Dict, List, Type, Union
 
 import ray
-from ray.rllib.agents.ppo.ppo_tf_policy import setup_config
-from ray.rllib.evaluation.postprocessing import compute_gae_for_sample_batch, \
+import src
+from src.rllib.agents.ppo.ppo_tf_policy import setup_config
+from src.rllib.evaluation.postprocessing import compute_gae_for_sample_batch, \
     Postprocessing
-from ray.rllib.models.modelv2 import ModelV2
-from ray.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
-from ray.rllib.policy.policy import Policy
-from ray.rllib.policy.policy_template import build_policy_class
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.torch_policy import EntropyCoeffSchedule, \
+from src.rllib.models.modelv2 import ModelV2
+from src.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
+from src.rllib.policy.policy import Policy
+from src.rllib.policy.policy_template import build_policy_class
+from src.rllib.policy.sample_batch import SampleBatch
+from src.rllib.policy.torch_policy import EntropyCoeffSchedule, \
     LearningRateSchedule
-from ray.rllib.utils.framework import try_import_torch
-from ray.rllib.utils.torch_ops import apply_grad_clipping, \
+from src.rllib.utils.framework import try_import_torch
+from src.rllib.utils.torch_ops import apply_grad_clipping, \
     explained_variance, sequence_mask
-from ray.rllib.utils.typing import TensorType, TrainerConfigDict
+from src.rllib.utils.typing import TensorType, TrainerConfigDict
 
 torch, nn = try_import_torch()
 
@@ -252,7 +253,7 @@ def setup_mixins(policy: Policy, obs_space: gym.spaces.Space,
 PPOTorchPolicy = build_policy_class(
     name="PPOTorchPolicy",
     framework="torch",
-    get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
+    get_default_config=lambda: src.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     loss_fn=ppo_surrogate_loss,
     stats_fn=kl_and_loss_stats,
     extra_action_out_fn=vf_preds_fetches,

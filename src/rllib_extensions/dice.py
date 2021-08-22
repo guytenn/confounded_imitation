@@ -2,24 +2,24 @@ from gym.spaces import Discrete, MultiDiscrete, Space
 import numpy as np
 from typing import Optional, Tuple, Union
 
-from ray.rllib.models.action_dist import ActionDistribution
-from ray.rllib.models.catalog import ModelCatalog
-from ray.rllib.models.modelv2 import ModelV2
-from ray.rllib.models.tf.tf_action_dist import Categorical, MultiCategorical
-from ray.rllib.models.torch.misc import SlimFC
-from ray.rllib.models.torch.torch_action_dist import TorchCategorical, \
+from src.rllib.models.action_dist import ActionDistribution
+from src.rllib.models.catalog import ModelCatalog
+from src.rllib.models.modelv2 import ModelV2
+from src.rllib.models.tf.tf_action_dist import Categorical, MultiCategorical
+from src.rllib.models.torch.misc import SlimFC
+from src.rllib.models.torch.torch_action_dist import TorchCategorical, \
     TorchMultiCategorical
-from ray.rllib.models.utils import get_activation_fn
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.utils import NullContextManager
-from ray.rllib.utils.annotations import override
-from ray.rllib.utils.exploration.exploration import Exploration
-from ray.rllib.utils.framework import try_import_tf, \
+from src.rllib.models.utils import get_activation_fn
+from src.rllib.policy.sample_batch import SampleBatch
+from src.rllib.utils import NullContextManager
+from src.rllib.utils.annotations import override
+from src.rllib.utils.exploration.exploration import Exploration
+from src.rllib.utils.framework import try_import_tf, \
     try_import_torch
-from ray.rllib.utils.from_config import from_config
-from ray.rllib.utils.tf_ops import get_placeholder, one_hot as tf_one_hot
-from ray.rllib.utils.torch_ops import one_hot
-from ray.rllib.utils.typing import FromConfigSpec, ModelConfigDict, TensorType
+from src.rllib.utils.from_config import from_config
+from src.rllib.utils.tf_ops import get_placeholder, one_hot as tf_one_hot
+from src.rllib.utils.torch_ops import one_hot
+from src.rllib.utils.typing import FromConfigSpec, ModelConfigDict, TensorType
 
 tf1, tf, tfv = try_import_tf()
 torch, nn = try_import_torch()

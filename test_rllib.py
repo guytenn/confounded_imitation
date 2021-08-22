@@ -3,9 +3,9 @@ from ray import tune
 from ray.tune.logger import DEFAULT_LOGGERS
 from ray.tune.integration.wandb import WandbLogger
 from src.rllib_extensions.slateq import SlateQTrainer
-from ray.rllib.env.wrappers.recsim_wrapper import make_recsim_env  # this is important as it imports the recsim env
+from src.rllib.env.wrappers.recsim_wrapper import make_recsim_env  # this is important as it imports the recsim env
 
-import ray.rllib.agents.slateq
+import src.rllib.agents.slateq
 ray.init()
 tune.run(
     SlateQTrainer,
