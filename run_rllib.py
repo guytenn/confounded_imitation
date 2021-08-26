@@ -120,7 +120,7 @@ def setup_config(env, args):
     # num_gpus = 0.0001  # Driver GPU
     # num_gpus_per_worker = (gpu_count - num_gpus) / num_processes
     # config['num_gpus_per_worker'] = num_gpus_per_worker
-    config['num_gpus'] = 1
+    config['num_gpus'] = 0
     config['num_cpus_per_worker'] = 0
     config['seed'] = args.seed
     config['log_level'] = 'ERROR'
@@ -228,18 +228,18 @@ def train(args):
     return checkpoint_path
 
 
-def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, seed=0, no_context=False, covariate_shift=False, n_episodes=1, extra_configs={}):
+def render_policy(args):
     ray.init(num_cpus=multiprocessing.cpu_count(), ignore_reinit_error=True, log_to_driver=False)
-    if env is None:
-        env = make_env(env_name, coop, seed=seed)
-        if colab:
-            env.setup_camera(camera_eye=[0.5, -0.75, 1.5], camera_target=[-0.2, 0, 0.75], fov=60, camera_width=1920//4, camera_height=1080//4)
-    test_agent, _ = load_agent(env, args, env_name, policy_path, True, 0, no_context, -1, covariate_shift, None, None, coop, seed, extra_configs)
+    if args.env == 'RecSim-v2':
+        raise ValueError('RecSim env not supported for rendering')
+    else:
+        env = make_env(args.env)
 
-    if not colab:
-        env.render()
+    test_agent, _ = load_agent(env, args)
+
+    env.render()
     frames = []
-    for episode in range(n_episodes):
+    for episode in range(args.render_episodes):
         obs = env.reset()
         done = False
         while not done:
@@ -255,15 +255,8 @@ def render_policy(env, env_name, algo, policy_path, coop=False, colab=False, see
                 action = test_agent.compute_action(obs)
                 # Step the simulation forward using the action from our trained policy
                 obs, reward, done, info = env.step(action)
-            if colab:
-                # Capture (render) an image from the camera
-                img, depth = env.get_camera_image_depth()
-                frames.append(img)
+
     env.disconnect()
-    if colab:
-        filename = 'output_%s.png' % env_name
-        write_apng(filename, frames, delay=100)
-        return filename
 
 
 def evaluate_policy(args, extra_configs={}):
@@ -464,7 +457,7 @@ if __name__ == '__main__':
     if args.train:
         checkpoint_path = train(args)
     if args.render:
-        render_policy(None, args.env, args.algo, checkpoint_path if checkpoint_path is not None else args.load_policy_path, coop=coop, colab=args.colab, seed=args.seed, no_context=False, covariate_shift=False, n_episodes=args.render_episodes)
+        render_policy(args)
     if args.evaluate or args.save_data:
         evaluate_policy(args, extra_configs={'alpha': [10, 1.5], 'beta': [4, 4], 'n_confounders': args.n_confounders, 'confounding_strength': args.confounding_strength / 10})
 
