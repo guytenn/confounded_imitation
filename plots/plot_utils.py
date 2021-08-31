@@ -60,4 +60,12 @@ if __name__ == '__main__':
     PlotUtils.plot_rewards('data/recsim-confounding-chi.json',
                            title='RecSim Confounding Effect',
                            legend_dict=OrderedDict({f'cov_shift_{i}': f'Shift Strength: {float(i / 10):g}' for i in range(0, 11, 2)}),
+                           smoothing=10,
+                           save_to_file=True)
+
+    PlotUtils.plot_rewards('data/Feeding_Strength.json',
+                           title='FeedingSawyer-v1',
+                           legend_dict=OrderedDict(
+                               {f'strength_{i}': f'Shift Strength: {float(i / 10):g}' for i in range(0, 11, 2)}),
+                           smoothing=3,
                            save_to_file=True)
