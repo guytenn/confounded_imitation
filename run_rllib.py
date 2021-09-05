@@ -33,9 +33,9 @@ def setup_config(env, args):
     config = dict()
     if args.algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
-        config['train_batch_size'] = 19200
+        config['train_batch_size'] = args.train_batch_size
         config['num_sgd_iter'] = 50
-        config['sgd_minibatch_size'] = 128
+        config['sgd_minibatch_size'] = args.sgd_minibatch_size
         config['lambda'] = 0.95
         config['model']['fcnet_hiddens'] = [100, 100]
     elif args.algo == 'sac':
@@ -125,7 +125,7 @@ def setup_config(env, args):
     # num_gpus = 0.0001  # Driver GPU
     # num_gpus_per_worker = (gpu_count - num_gpus) / num_processes
     # config['num_gpus_per_worker'] = num_gpus_per_worker
-    config['num_gpus'] = 0
+    config['num_gpus'] = args.n_gpus
     config['num_cpus_per_worker'] = 0
     config['seed'] = args.seed
     config['log_level'] = 'ERROR'
@@ -416,6 +416,12 @@ if __name__ == '__main__':
                         help='Whether to save data of policy over n_episodes')
     parser.add_argument('--data_suffix', default='',
                         help='Use special suffix for data (saving and loading)')
+    parser.add_argument('--n_gpus', type=float, default=0,
+                        help='Number of gpus to use for training')
+    parser.add_argument('--train_batch_size', type=int, default=19200,
+                        help='Number of training rollout size for PPO training (default: 19200)')
+    parser.add_argument('--sgd_minibatch_size', type=int, default=128,
+                        help='Batch size for PPO training (default: 128)')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
     parser.add_argument('--dice_coef', type=float, default=0,
