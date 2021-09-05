@@ -120,7 +120,7 @@ def setup_config(env, args):
                     'confounding_strength': 0
                 }
         else:
-            config['env_config'] = {'sparse_reward': args.sparse, 'context_params': None}
+            config['env_config'] = {'seed': args.seed, 'sparse_reward': args.sparse, 'context_params': None}
     config['num_workers'] = num_processes
     # gpu_count = 1
     # num_gpus = 0.0001  # Driver GPU
