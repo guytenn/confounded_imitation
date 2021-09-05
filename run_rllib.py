@@ -80,6 +80,11 @@ def setup_config(env, args):
                     'n_confounders': n_confounders,
                     'confounding_strength': 1
                 }
+        elif env_name == 'rooms-v0':
+            config['env_config'] = \
+                {
+
+                }
         else:
             config['env_config'] = \
                 {

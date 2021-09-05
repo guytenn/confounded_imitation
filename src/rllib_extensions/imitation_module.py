@@ -26,6 +26,7 @@ class ImitationModule:
         self.workers = workers
         self.imitation_method = dice_config['imitation_method']
         self.is_recsim = dice_config['env_name'] == 'RecSim-v2'
+        self.is_rooms = dice_config['env_name'] == 'rooms-v0'
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
         self.features_to_remove = dice_config['features_to_remove']
@@ -59,13 +60,12 @@ class ImitationModule:
             # action_shape = self.action_space.n
             # action_shape = self.action_space.nvec[0]
             action_shape = self.state_dim
+        elif self.is_rooms:
+            action_shape = self.action_space.n
         else:
             action_shape = self.action_space.shape[0]
 
-        if self.is_recsim:
-            input_shape = len(self.features_to_keep) + action_shape + 1
-        else:
-            input_shape = len(self.features_to_keep) + action_shape + 1
+        input_shape = len(self.features_to_keep) + action_shape + 1
         self.g = self._create_fc_net((input_shape, self.hidden_dim, self.hidden_dim, 1), "relu", name="g_net")
         opt_params = list(self.g.parameters())
         self.g = self.g.to(self.device)
@@ -85,7 +85,6 @@ class ImitationModule:
         self.var = None
         self.count = None
         self.returns = None
-
 
     def __call__(self, samples: SampleBatch) -> SampleBatch:
         policy = self.workers.local_worker().policy_map['default_policy']
@@ -184,7 +183,6 @@ class ImitationModule:
             dice_epochs = 50
             n_samples = len(samples[SampleBatch.OBS]) // batch_size
             optimizer = self.optimizer
-
 
         for _ in range(dice_epochs):
             for _ in range(n_samples):
