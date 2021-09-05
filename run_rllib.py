@@ -88,6 +88,7 @@ def setup_config(env, args):
         else:
             config['env_config'] = \
                 {
+                    'seed': args.seed,
                     'sparse_reward': args.sparse,
                     'context_params': \
                         {
