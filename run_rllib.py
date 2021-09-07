@@ -33,9 +33,9 @@ def setup_config(env, args):
     config = dict()
     if args.algo == 'ppo':
         config = ppo.DEFAULT_CONFIG.copy()
-        config['train_batch_size'] = args.train_batch_size
+        config['train_batch_size'] = 19200
         config['num_sgd_iter'] = 50
-        config['sgd_minibatch_size'] = args.sgd_minibatch_size
+        config['sgd_minibatch_size'] = 128
         config['lambda'] = 0.95
         config['model']['fcnet_hiddens'] = [100, 100]
     elif args.algo == 'sac':
@@ -80,9 +80,15 @@ def setup_config(env, args):
                     'n_confounders': n_confounders,
                     'confounding_strength': 1
                 }
+        elif env_name == 'rooms-v0':
+            config['env_config'] = \
+                {
+
+                }
         else:
             config['env_config'] = \
                 {
+                    'seed': args.seed,
                     'sparse_reward': args.sparse,
                     'context_params': \
                         {
@@ -114,13 +120,13 @@ def setup_config(env, args):
                     'confounding_strength': 0
                 }
         else:
-            config['env_config'] = {'sparse_reward': args.sparse, 'context_params': None}
+            config['env_config'] = {'seed': args.seed, 'sparse_reward': args.sparse, 'context_params': None}
     config['num_workers'] = num_processes
     # gpu_count = 1
     # num_gpus = 0.0001  # Driver GPU
     # num_gpus_per_worker = (gpu_count - num_gpus) / num_processes
     # config['num_gpus_per_worker'] = num_gpus_per_worker
-    config['num_gpus'] = args.n_gpus
+    config['num_gpus'] = args.num_gpus
     config['num_cpus_per_worker'] = 0
     config['seed'] = args.seed
     config['log_level'] = 'ERROR'
@@ -399,6 +405,8 @@ if __name__ == '__main__':
                         help='Use sparse reward signal')
     parser.add_argument('--num-processes', type=int, default=-1,
                         help='Number of workers during training (default = -1, use all cpus)')
+    parser.add_argument('--num-gpus', type=int, default=1,
+                        help='Number of gpus (default = 1)')
     parser.add_argument('--load', action='store_true', default=False,
                         help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
@@ -411,12 +419,6 @@ if __name__ == '__main__':
                         help='Whether to save data of policy over n_episodes')
     parser.add_argument('--data_suffix', default='',
                         help='Use special suffix for data (saving and loading)')
-    parser.add_argument('--n_gpus', type=float, default=0,
-                        help='Number of gpus to use for training')
-    parser.add_argument('--train_batch_size', type=int, default=19200,
-                        help='Number of training rollout size for PPO training (default: 19200)')
-    parser.add_argument('--sgd_minibatch_size', type=int, default=128,
-                        help='Batch size for PPO training (default: 128)')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
     parser.add_argument('--dice_coef', type=float, default=0,
