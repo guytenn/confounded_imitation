@@ -77,6 +77,9 @@ class ImitationModule:
             self.h_clone = copy.deepcopy(self.h)
             opt_params += list(self.h.parameters())
             clone_params += list(self.h_clone.parameters())
+        else:
+            self.h = None
+            self.h_clone = None
 
         self.optimizer = torch.optim.Adam(opt_params, lr=self.lr)
         self.optimizer_clone = torch.optim.Adam(clone_params, lr=self.lr)
