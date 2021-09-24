@@ -130,13 +130,21 @@ class ImitationModule:
         # TRAIN DICE
         self._train(samples_input, sample_weights)
 
+        # UPDATE DICE COEF IF NEEDED
+        if self.dice_coef == -1:
+            r_mean = np.mean(samples_batch[SampleBatch.REWARDS])
+            r_bonus_mean = np.mean(reward_bonus)
+            dice_coef = r_mean / (r_mean + r_bonus_mean)
+        else:
+            dice_coef = self.dice_coef
+
         # UPDATE REWARD AND RECALCULATE ADVANTAGE
         rollouts = samples_batch.split_by_episode()
         start_idx = 0
         for i in range(len(rollouts)):
             rollouts[i][SampleBatch.REWARDS] = \
-                (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
-                self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
+                (1 - dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
+                dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
             # rollouts[i] = compute_advantages(rollouts[i], 0, 0.99, 0.95, True, True)
             rollouts[i] = compute_gae_for_sample_batch(policy, rollouts[i])
             start_idx += len(rollouts[i])

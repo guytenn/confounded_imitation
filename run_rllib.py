@@ -446,7 +446,7 @@ if __name__ == '__main__':
     coop = ('Human' in args.env)
     checkpoint_path = None
 
-    if args.dice_coef < 0 or args.dice_coef > 1:
+    if args.dice_coef != -1 and (args.dice_coef < 0 or args.dice_coef > 1):
         raise ValueError("dice_coeff must be a value in [0,1]")
 
     if args.resampling_coef < 0 or args.resampling_coef > 1:
