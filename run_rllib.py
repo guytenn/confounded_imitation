@@ -421,7 +421,7 @@ if __name__ == '__main__':
                         help='Use special suffix for data (saving and loading)')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
-    parser.add_argument('--dice_coef', type=float, default=0,
+    parser.add_argument('--dice_coef', type=float, default=-1,
                         help='Dice coefficient, between 0 and 1')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
