@@ -30,6 +30,7 @@ class ImitationModule:
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
         self.features_to_remove = dice_config['features_to_remove']
+        self.adaptive_coef = dice_config['adaptive_coef']
         self.dice_coef = dice_config['dice_coef']
         self.lr = dice_config['lr']
         self.state_dim = dice_config['state_dim']
@@ -131,7 +132,7 @@ class ImitationModule:
         self._train(samples_input, sample_weights)
 
         # UPDATE DICE COEF IF NEEDED
-        if self.dice_coef == -1:
+        if self.adaptive_coef:
             r_mean = np.mean(samples_batch[SampleBatch.REWARDS])
             r_bonus_mean = np.mean(reward_bonus)
             dice_coef = r_mean / (r_mean + r_bonus_mean)
