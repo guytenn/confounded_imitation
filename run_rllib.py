@@ -150,6 +150,7 @@ def setup_config(env, args):
             "expert_path": expert_data_path,
             "hidden_dim": hidden_dim,
             "dice_coef": args.dice_coef,
+            "adaptive_coef": args.adaptive_coef,
             "observation_space": env.observation_space,
             "action_space": env.action_space,
             "state_dim": state_dim,
@@ -421,8 +422,10 @@ if __name__ == '__main__':
                         help='Use special suffix for data (saving and loading)')
     parser.add_argument('--train-timesteps', type=int, default=1000000,
                         help='Number of simulation timesteps to train a policy (default: 1000000)')
-    parser.add_argument('--dice_coef', type=float, default=0,
+    parser.add_argument('--dice_coef', type=float, default=-1,
                         help='Dice coefficient, between 0 and 1')
+    parser.add_argument('--adaptive_coef', action='store_true', default=False,
+                        help='Whether use an adaptive dice coefficient')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
     parser.add_argument('--data_root_dir', default='~',
@@ -445,6 +448,9 @@ if __name__ == '__main__':
 
     coop = ('Human' in args.env)
     checkpoint_path = None
+
+    if args.adaptive_coef:
+        args.dice_coef = 0.5
 
     if args.dice_coef < 0 or args.dice_coef > 1:
         raise ValueError("dice_coeff must be a value in [0,1]")

@@ -30,6 +30,7 @@ class ImitationModule:
         self.expert_path = dice_config['expert_path']
         self.gamma = dice_config['gamma']
         self.features_to_remove = dice_config['features_to_remove']
+        self.adaptive_coef = dice_config['adaptive_coef']
         self.dice_coef = dice_config['dice_coef']
         self.lr = dice_config['lr']
         self.state_dim = dice_config['state_dim']
@@ -77,6 +78,9 @@ class ImitationModule:
             self.h_clone = copy.deepcopy(self.h)
             opt_params += list(self.h.parameters())
             clone_params += list(self.h_clone.parameters())
+        else:
+            self.h = None
+            self.h_clone = None
 
         self.optimizer = torch.optim.Adam(opt_params, lr=self.lr)
         self.optimizer_clone = torch.optim.Adam(clone_params, lr=self.lr)
@@ -104,6 +108,7 @@ class ImitationModule:
         reward_bonus = self._predict_reward(samples_input)
 
         # ESTIMATE TRAJECTORY SAMPLE MINIMIZER
+        reweighted = 0
         if self.dice_coef < 1 and self.resampling_coef > 0:
             for param, target_param in zip(self.g.parameters(), self.g_clone.parameters()):
                 target_param.data.copy_(param.data)
@@ -111,10 +116,14 @@ class ImitationModule:
             cov_sensitivity = self.resampling_coef  # number between 0 and 1. Higher means will attempt larger covariate shifts sampling
             instrum = ng.p.Instrumentation(ng.p.Array(shape=(n_traj.item(),)).set_bounds(lower=-10, upper=10))
             optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=100, num_workers=1)
-            weights = optimizer.minimize(lambda w: self._sampler_trainer(samples_input, cov_sensitivity, w)).value[0][0]
-            projected_weights = weights / 10. + 1. / cov_sensitivity
-            sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
-                                                     self.expert_buffer.traj_lengths)
+            try:
+                weights = optimizer.minimize(lambda w: self._sampler_trainer(samples_input, cov_sensitivity, w)).value[0][0]
+                projected_weights = weights / 10. + 1. / cov_sensitivity
+                sample_weights = torch.repeat_interleave(torch.from_numpy(projected_weights).to(self.device),
+                                                         self.expert_buffer.traj_lengths)
+                reweighted = 1
+            except:
+                sample_weights = None
         else:
             sample_weights = None
 
@@ -122,13 +131,21 @@ class ImitationModule:
         # TRAIN DICE
         self._train(samples_input, sample_weights)
 
+        # UPDATE DICE COEF IF NEEDED
+        if self.adaptive_coef:
+            r_mean = np.mean(samples_batch[SampleBatch.REWARDS])
+            r_bonus_mean = np.mean(reward_bonus)
+            dice_coef = r_mean / (r_mean + r_bonus_mean)
+        else:
+            dice_coef = self.dice_coef
+
         # UPDATE REWARD AND RECALCULATE ADVANTAGE
         rollouts = samples_batch.split_by_episode()
         start_idx = 0
         for i in range(len(rollouts)):
             rollouts[i][SampleBatch.REWARDS] = \
-                (1 - self.dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
-                self.dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
+                (1 - dice_coef) * rollouts[i][SampleBatch.REWARDS] + \
+                dice_coef * reward_bonus[start_idx:start_idx+len(rollouts[i])]
             # rollouts[i] = compute_advantages(rollouts[i], 0, 0.99, 0.95, True, True)
             rollouts[i] = compute_gae_for_sample_batch(policy, rollouts[i])
             start_idx += len(rollouts[i])
@@ -136,7 +153,8 @@ class ImitationModule:
 
         # Send back extra info for metrics
         policy.config['extra_info'] = {"imitation_reward": reward_bonus.mean(),
-                                       "augmented_total_reward": samples_batch[SampleBatch.REWARDS].mean()}
+                                       "augmented_total_reward": samples_batch[SampleBatch.REWARDS].mean(),
+                                       "resamp_weights": reweighted}
 
         # Return the postprocessed sample batch (with the corrected rewards).
         return samples_batch
