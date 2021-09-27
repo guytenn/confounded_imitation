@@ -161,6 +161,8 @@ class ImitationModule:
 
         if self.imitation_method == 'gail':
             return torch.sigmoid(res)
+        elif self.imitation_method == 'tv':
+            return 0.5 * torch.tanh(res)
         else:
             return res
 
@@ -209,6 +211,8 @@ class ImitationModule:
                     loss = torch.log(0.9 * torch.exp(expert_d).mean() + 0.1 * torch.exp(policy_d).mean()) - policy_d.mean()
                 elif self.imitation_method == 'chi':
                     loss = alpha * torch.pow(expert_d, 2).mean() + (1 - alpha) * torch.pow(policy_d, 2).mean() - 2 * policy_d.mean()
+                elif self.imitation_method == 'tv':
+                    loss = alpha * expert_d.mean() + (1 - alpha) * policy_d.mean() - policy_d.mean()
                 else:
                     raise ValueError(f'Unknown imitation method {self.imitation_method}')
 

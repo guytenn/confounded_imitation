@@ -389,7 +389,7 @@ if __name__ == '__main__':
                         help='Random seed (default: -1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
-    parser.add_argument('--imitation_method', default='gail', choices=['gail', 'chi', 'kl'],
+    parser.add_argument('--imitation_method', default='gail', choices=['gail', 'chi', 'kl', 'tv'],
                         help='imitation method to use')
     parser.add_argument('--no_context', action='store_true', default=False,
                         help='Remove context for imitation')
