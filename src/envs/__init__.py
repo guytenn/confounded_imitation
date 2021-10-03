@@ -9,7 +9,7 @@ register(
     max_episode_steps=100000,
     kwargs={}
 )
-register_env('confounded_imitation:rooms-v0', lambda config: RoomsEnv(seed=-1))
+register_env('confounded_imitation:rooms-v0', lambda config: RoomsEnv(seed=config['seed'], random_walls=config['random_walls']))
 
 register(
     id='SparseHopper-v0',
