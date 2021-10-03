@@ -14,17 +14,17 @@ c2rgb = [[0, 0, 255],
 
 # APPLE_CELLS = [(9, 10), (9, 8), (12, 10), (1, 7), (5, 4), (5, 14), (1, 13), (7, 2), (4, 2), (14, 1), (5, 1), (3, 4), (9, 3), (9, 14), (9, 2), (2, 13), (6, 4), (10, 4), (4, 10), (7, 5)]
 MINE_CELLS = [(4, 6), (2, 12), (8, 10), (4, 1), (14, 6), (4, 8), (4, 7), (10, 12), (5, 13), (5, 8), (7, 10), (9, 9), (2, 7), (11, 14), (4, 13), (5, 11), (13, 3), (8, 1), (4, 12), (10, 2)]
-START_CELL = [(1, 1), (13, 1)]
-APPLE_CELLS = [(1, 13), (13, 13)]
-GOAL_CELLS = [(1, 13), (13, 13)]
+START_CELL = [(1, 1), (8, 1)]
+APPLE_CELLS = [(1, 8), (8, 8)]
+GOAL_CELLS = [(1, 8), (8, 8)]
 
 
 class RoomsEnv(core.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, rows=15, cols=15, empty=False, random_walls=False,
+    def __init__(self, rows=10, cols=10, empty=False, random_walls=True,
                  obstacles: Iterable[Union[Tuple, List]] = None, spatial=False,
-                 n_apples=0, n_mines=0,
+                 n_apples=0, n_mines=0, doors_in_state=True,
                  action_repeats=1, max_steps=None, seed=None, fixed_reset=True,
                  mask_size=0, px=(0.2, 0.8),
                  wind_in_state=False, random_wind=False, vert_wind=(0.2, 0.2), horz_wind=(0.2, 0.2)):
@@ -36,6 +36,8 @@ class RoomsEnv(core.Env):
             seed = np.random.randint(2 ** 30 - 1)
 
         self.context_features = [2, 3, 4, 5]
+        if doors_in_state:
+            self.context_features += [6, 7, 8, 9, 10, 11, 12, 13]
 
         self.rows, self.cols = rows, cols
         if max_steps is None:
@@ -63,7 +65,7 @@ class RoomsEnv(core.Env):
             self.observation_space = spaces.Box(low=0, high=1, shape=(n_channels, 80, 80),
                                                 dtype=np.float32)
         else:
-            n_channels = 6 # 2 + (n_apples + n_mines) * 2 + wind_in_state * 4
+            n_channels = 6 + 8 * doors_in_state
             self.observation_space = spaces.Box(low=-1, high=1, shape=(n_channels,), dtype=np.float32)
 
         self.directions = [np.array((-1, 0)), np.array((1, 0)), np.array((0, -1))] + [np.array((0, 1))]
@@ -257,7 +259,7 @@ class RoomsEnv(core.Env):
             return obs.astype('float32')
         else:
             obs = list(self.state_cell)
-            obs = np.concatenate([obs, self.apples_cells, self.mines_cells])
+            obs = np.concatenate([obs, self.apples_cells, self.mines_cells, *self.doors])
             obs = 2 * (np.array(obs) / self.scale - 0.5)
             if self.wind_in_state:
                 obs = np.concatenate([obs, [*self.vert_wind, *self.horz_wind]])
