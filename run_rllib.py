@@ -66,6 +66,7 @@ def setup_config(env, args):
         airl = True
         context_features = env.unwrapped.context_features
         hidden_dim = 100
+
     if args.n_confounders == -1:
         n_confounders = len(context_features)
     else:
