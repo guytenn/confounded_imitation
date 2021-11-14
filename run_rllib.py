@@ -151,6 +151,7 @@ def setup_config(env, args):
             "hidden_dim": hidden_dim,
             "dice_coef": args.dice_coef,
             "adaptive_coef": args.adaptive_coef,
+            "decaying_coef": args.decaying_coef,
             "observation_space": env.observation_space,
             "action_space": env.action_space,
             "state_dim": state_dim,
@@ -426,6 +427,8 @@ if __name__ == '__main__':
                         help='Dice coefficient, between 0 and 1')
     parser.add_argument('--adaptive_coef', action='store_true', default=False,
                         help='Whether use an adaptive dice coefficient')
+    parser.add_argument('--decaying_coef', type=float, default=0,
+                        help='Will decay dice_coef in time when larger than 0. Larger value = slower decay. 0 = no decay.')
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='Directory to save trained policy in (default ./trained_models/)')
     parser.add_argument('--data_root_dir', default='~',

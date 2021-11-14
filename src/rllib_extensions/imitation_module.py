@@ -40,6 +40,8 @@ class ImitationModule:
         self.standardize = dice_config["standardize"]
         self.resampling_coef = dice_config['resampling_coef']
         self.airl = dice_config["airl"]
+        self.decaying_coef = dice_config["decaying_coef"]
+        self.n_samples = 0
 
         self.features_to_keep = [i for i in range(self.state_dim) if i not in self.features_to_remove]
 
@@ -138,6 +140,10 @@ class ImitationModule:
             dice_coef = r_mean / (r_mean + r_bonus_mean)
         else:
             dice_coef = self.dice_coef
+
+        if self.decaying_coef > 0:
+            self.n_samples += len(reward_bonus)
+            dice_coef *= self.decaying_coef / self.n_samples
 
         # UPDATE REWARD AND RECALCULATE ADVANTAGE
         rollouts = samples_batch.split_by_episode()
