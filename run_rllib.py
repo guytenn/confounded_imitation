@@ -66,6 +66,7 @@ def setup_config(env, args):
         airl = True
         context_features = env.unwrapped.context_features
         hidden_dim = 100
+
     if args.n_confounders == -1:
         n_confounders = len(context_features)
     else:
@@ -83,7 +84,8 @@ def setup_config(env, args):
         elif env_name == 'rooms-v0':
             config['env_config'] = \
                 {
-
+                    'seed': args.seed,
+                    'random_walls': False
                 }
         else:
             config['env_config'] = \
@@ -120,7 +122,10 @@ def setup_config(env, args):
                     'confounding_strength': 0
                 }
         else:
-            config['env_config'] = {'seed': args.seed, 'sparse_reward': args.sparse, 'context_params': None}
+            config['env_config'] = {'seed': args.seed,
+                                    'sparse_reward': args.sparse,
+                                    'context_params': None,
+                                    'random_walls': True}
     config['num_workers'] = num_processes
     # gpu_count = 1
     # num_gpus = 0.0001  # Driver GPU
@@ -192,15 +197,10 @@ def load_agent(env, args):
 
 
 def make_env(env_name, coop=False, env_config={}, seed=1001):
-    if not coop:
-        if env_name == 'RecSim-v2':
-            env = make_recsim_env(env_config)
-        else:
-            env = gym.make(env_name)
+    if env_name == 'RecSim-v2':
+        env = make_recsim_env(env_config)
     else:
-        module = importlib.import_module('assistive_gym.envs')
-        env_class = getattr(module, env_name.split('-')[0] + 'Env')
-        env = env_class()
+        env = gym.make(env_name)
     env.seed(seed)
     return env
 
@@ -220,11 +220,6 @@ def train(args):
     while timesteps < args.train_timesteps:
         result = agent.train()
         timesteps = result['timesteps_total']
-        if coop:
-            # Rewards are added in multi agent envs, so we divide by 2 since agents share the same reward in coop
-            result['episode_reward_mean'] /= 2
-            result['episode_reward_min'] /= 2
-            result['episode_reward_max'] /= 2
         print(f"Iteration: {result['training_iteration']}, total timesteps: {result['timesteps_total']}, total time: {result['time_total_s']:.1f}, FPS: {result['timesteps_total']/result['time_total_s']:.1f}, mean reward: {result['episode_reward_mean']:.1f}, min/max reward: {result['episode_reward_min']:.1f}/{result['episode_reward_max']:.1f}")
         sys.stdout.flush()
 
@@ -251,18 +246,10 @@ def render_policy(args):
         obs = env.reset()
         done = False
         while not done:
-            if coop:
-                # Compute the next action for the robot/human using the trained policies
-                action_robot = test_agent.compute_action(obs['robot'], policy_id='robot')
-                action_human = test_agent.compute_action(obs['human'], policy_id='human')
-                # Step the simulation forward using the actions from our trained policies
-                obs, reward, done, info = env.step({'robot': action_robot, 'human': action_human})
-                done = done['__all__']
-            else:
-                # Compute the next action using the trained policy
-                action = test_agent.compute_action(obs)
-                # Step the simulation forward using the action from our trained policy
-                obs, reward, done, info = env.step(action)
+            # Compute the next action using the trained policy
+            action = test_agent.compute_action(obs)
+            # Step the simulation forward using the action from our trained policy
+            obs, reward, done, info = env.step(action)
 
     env.disconnect()
 
@@ -279,57 +266,40 @@ def evaluate_policy(args, extra_configs={}):
 
     data = dict(states=[], actions=[], rewards=[], dones=[])
     rewards = []
-    forces = []
     task_successes = []
     lengths = np.zeros(args.eval_episodes)
     for episode in tqdm(range(args.eval_episodes)):
         obs = env.reset()
         done = False
         reward_total = 0.0
-        force_list = []
         task_success = 0.0
         episode_data = dict(states=[], actions=[], rewards=[], dones=[])
         while not done:
             lengths[episode] += 1
-            if coop:
-                # Compute the next action for the robot/human using the trained policies
-                action_robot = test_agent.compute_action(obs['robot'], policy_id='robot')
-                action_human = test_agent.compute_action(obs['human'], policy_id='human')
-                # Step the simulation forward using the actions from our trained policies
-                obs, reward, done, info = env.step({'robot': action_robot, 'human': action_human})
-                reward = reward['robot']
-                done = done['__all__']
-                info = info['robot']
+            if args.env == 'RecSim-v2':
+                action = recsim_expert.compute_action(env)
             else:
+                action = test_agent.compute_action(obs)
+            prev_obs = obs.copy()
+            obs, reward, done, info = env.step(action)
+            if args.save_data:
                 if args.env == 'RecSim-v2':
-                    action = recsim_expert.compute_action(env)
+                    doc = np.concatenate([val[np.newaxis, :] for val in obs["doc"].values()], 0)
+                    # episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
+                    episode_data['states'].append(prev_obs['user'])
+                    episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
                 else:
-                    action = test_agent.compute_action(obs)
-                prev_obs = obs.copy()
-                obs, reward, done, info = env.step(action)
-                if args.save_data:
-                    if args.env == 'RecSim-v2':
-                        doc = np.concatenate([val[np.newaxis, :] for val in obs["doc"].values()], 0)
-                        # episode_data['states'].append(np.concatenate((prev_obs['user'], doc.sum(0).clip(0, 1)), axis=-1))
-                        episode_data['states'].append(prev_obs['user'])
-                        episode_data['actions'].append(np.array(list(prev_obs['doc'].values()))[action].flatten())
-                    else:
-                        episode_data['states'].append(prev_obs)
-                        episode_data['actions'].append(action)
-                    episode_data['rewards'].append(reward)
-                    episode_data['dones'].append(done)
+                    episode_data['states'].append(prev_obs)
+                    episode_data['actions'].append(action)
+                episode_data['rewards'].append(reward)
+                episode_data['dones'].append(done)
             reward_total += reward
-
-            # force_list.append(info['total_force_on_human'])
-            # task_success = info['task_success']
 
         if reward_total > args.min_reward_to_save:
             for key, val in episode_data.items():
                 data[key] += episode_data[key]
 
         rewards.append(reward_total)
-        # forces.append(np.mean(force_list))
-        # task_successes.append(task_success)
         if args.verbose:
             # print('Reward total: %.2f, mean force: %.2f, task success: %r' % (reward_total, np.mean(force_list), task_success))
             print('Reward total: %.2f,vtask success: %r' % (reward_total, task_success))
@@ -347,10 +317,6 @@ def evaluate_policy(args, extra_configs={}):
     # print('Rewards:', rewards)
     print('Reward Mean:', np.mean(rewards))
     print('Reward Std:', np.std(rewards))
-
-    # # print('Forces:', forces)
-    # print('Force Mean:', np.mean(forces))
-    # print('Force Std:', np.std(forces))
 
     # print('Task Successes:', task_successes)
     print('Task Success Mean:', np.mean(task_successes))
@@ -391,7 +357,7 @@ if __name__ == '__main__':
                         help='Random seed (default: -1)')
     parser.add_argument('--train', action='store_true', default=False,
                         help='Whether to train a new policy')
-    parser.add_argument('--imitation_method', default='gail', choices=['gail', 'chi', 'kl'],
+    parser.add_argument('--imitation_method', default='gail', choices=['gail', 'chi', 'kl', 'tv'],
                         help='imitation method to use')
     parser.add_argument('--no_context', action='store_true', default=False,
                         help='Remove context for imitation')
@@ -409,8 +375,6 @@ if __name__ == '__main__':
                         help='Number of workers during training (default = -1, use all cpus)')
     parser.add_argument('--num-gpus', type=int, default=1,
                         help='Number of gpus (default = 1)')
-    parser.add_argument('--load', action='store_true', default=False,
-                        help='Whether to load from checkpoint')
     parser.add_argument('--render', action='store_true', default=False,
                         help='Whether to render a single rollout of a trained policy')
     parser.add_argument('--evaluate', action='store_true', default=False,
