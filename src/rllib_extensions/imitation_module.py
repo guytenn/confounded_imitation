@@ -143,7 +143,7 @@ class ImitationModule:
 
         if self.decaying_coef > 0:
             self.n_samples += len(reward_bonus)
-            dice_coef *= self.decaying_coef / self.n_samples
+            dice_coef *= self.decaying_coef / np.sqrt(self.n_samples)
 
         # UPDATE REWARD AND RECALCULATE ADVANTAGE
         rollouts = samples_batch.split_by_episode()
